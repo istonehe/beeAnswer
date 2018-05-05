@@ -8,4 +8,11 @@ migrate = Migrate(app, db)
 
 @app.shell_context_processor
 def make_shell_context():
-    return dict(db=db, School=School, Course=Course, Teacher=Teacher, Student=Student, Ask=Ask, Answer=Answer, Topicimage=Topicimage, Feedback=Feedback)
+    return dict(db=db, School=School, Teacher=Teacher, Student=Student, Course=Course, Ask=Ask, Answer=Answer, Topicimage=Topicimage, Feedback=Feedback)
+
+@app.cli.command()
+def test():
+    """Run the unit tests."""
+    import unittest
+    tests = unittest.TestLoader().discover('tests')
+    unittest.TextTestRunner(verbosity=2).run(tests)

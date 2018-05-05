@@ -6,16 +6,65 @@ class Permission:
     CORRECT = 1
     ADMIN = 16
 
+employs = db.Table('employs',
+    db.Column('school_id', db.Integer, db.ForeignKey('schools.id'), primary_key=True),
+    db.Column('teacher_id', db.Integer, db.ForeignKey('teachers.id'), primary_key=True)
+)
+
+customers = db.Table('customers',
+    db.Column('school_id', db.Integer, db.ForeignKey('schools.id'), primary_key=True),
+    db.Column('teacher_id', db.Integer, db.ForeignKey('students.id'), primary_key=True)
+)
+
 class School(db.Model):
     __tablename__ = 'schools'
     id = db.Column(db.Integer, primary_key=True)
-    school_name = db.Column(db.String(64), unique=True)
-    school_intro = db.Column(db.String(256))
+    name = db.Column(db.String(256), unique=True)
+    intro = db.Column(db.Text)
     admin = db.Column(db.String(64))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     courses = db.relationship('Course', backref='school', lazy='dynamic')
-    teachers = db.relationship('Teacher', backref='school', lazy='dynamic')
+
+
+class Teacher(db.Model):
+    __tablename__ = 'teachers'
+    id = db.Column(db.Integer, primary_key=True)
+    nickname = db.Column(db.String(256))
+    rename = db.Column(db.String(256))
+    intro = db.Column(db.Text)
+    imgurl = db.Column(db.String(256))
+    email = db.Column(db.String(64), unique=True, index=True)
+    telephone = db.Column(db.String(16), unique=True)
+    gender = db.Column(db.Integer, default=0)
+    wxopenid = db.Column(db.String(32), unique=True)
+    answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
+    schools = db.relationship('School',
+                                secondary=employs,
+                                backref=db.backref('teachers', lazy='dynamic'),
+                                lazy='dynamic')
+
+
+class Student(db.Model):
+    __tablename__ = 'students'
+    id = db.Column(db.Integer, primary_key=True)
+    nickname = db.Column(db.String(256))
+    rename = db.Column(db.String(256))
+    imgurl = db.Column(db.String(256))
+    fromwhere = db.Column(db.String(128))
+    vip = db.Column(db.Boolean, default=False)
+    expvalue = (db.Integer)
+    ask_times = db.Column(db.Integer, default=5)
+    wxopenid = db.Column(db.String(32), unique=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    disabled = db.Column(db.Boolean, default=False)
+    asks = db.relationship('Ask', backref='student', lazy='dynamic')
+    feedbacks = db.relationship('Feedback', backref='student', lazy='dynamic')
+    schools = db.relationship('School',
+                                secondary=customers,
+                                backref=db.backref('students', lazy='dynamic'),
+                                lazy='dynamic')
+
 
 class Course(db.Model):
     __tablename__ = 'courses'
@@ -25,36 +74,6 @@ class Course(db.Model):
     nomal_times = db.Column(db.Integer, default=5)
     vip_times = db.Column(db.Integer, default=0)
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
-
-class Teacher(db.Model):
-    __tablename__ = 'teachers'
-    id = db.Column(db.Integer, primary_key=True)
-    teacher_nickname = db.Column(db.String(32))
-    teacher_rename = db.Column(db.String(32))
-    teacher_intro = db.Column(db.String(256))
-    teacher_imgurl = db.Column(db.String(256))
-    email = db.Column(db.String(64), unique=True, index=True)
-    telephone = db.Column(db.String(16), unique=True)
-    gender = db.Column(db.Integer, default=0)
-    wxopenid = db.Column(db.String(32), unique=True)
-    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
-    answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
-
-class Student(db.Model):
-    __tablename__ = 'students'
-    id = db.Column(db.Integer, primary_key=True)
-    student_nickname = db.Column(db.String(32))
-    student_rename = db.Column(db.String(32))
-    student_imgurl = db.Column(db.String(256))
-    fromwhere = db.Column(db.String(32))
-    vip = db.Column(db.Boolean, default=False)
-    expvalue = (db.Integer)
-    ask_times = db.Column(db.Integer, default=5)
-    wxopenid = db.Column(db.String(32), unique=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    disabled = db.Column(db.Boolean, default=False)
-    asks = db.relationship('Ask', backref='student', lazy='dynamic')
-    feedbacks = db.relationship('Feedback', backref='student', lazy='dynamic')
 
 class Ask(db.Model):
     __tablename__ = 'asks'

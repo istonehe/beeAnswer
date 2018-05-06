@@ -3,6 +3,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     FLASK_ADMIN = os.environ.get('FLASK_ADMIN')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'this is a string'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     @staticmethod
     def init_app(app):

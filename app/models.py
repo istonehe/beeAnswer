@@ -1,10 +1,46 @@
 from datetime import datetime
 from flask import current_app, request, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from . import db
 
 class Permission:
     CORRECT = 1
     ADMIN = 16
+
+class Admin(db.Model):
+    __tablename__ = 'admins'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), unique=True)
+    password_hash = db.Column(db.String(128))
+
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    #验证密码哈希串
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    #生成token
+    def generate_auth_token(self, expiration=600):
+        s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'id' : self.id})
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        admin_user = Admin.query.get(data['id'])
+        return admin_user
+
 
 employs = db.Table('employs',
     db.Column('school_id', db.Integer, db.ForeignKey('schools.id'), primary_key=True),
@@ -30,8 +66,9 @@ class School(db.Model):
 class Teacher(db.Model):
     __tablename__ = 'teachers'
     id = db.Column(db.Integer, primary_key=True)
-    nickname = db.Column(db.String(256))
-    rename = db.Column(db.String(256))
+    nickname = db.Column(db.String(128))
+    rename = db.Column(db.String(128))
+    password_hash = db.Column(db.String(128))
     intro = db.Column(db.Text)
     imgurl = db.Column(db.String(256))
     email = db.Column(db.String(64), unique=True, index=True)
@@ -48,8 +85,9 @@ class Teacher(db.Model):
 class Student(db.Model):
     __tablename__ = 'students'
     id = db.Column(db.Integer, primary_key=True)
-    nickname = db.Column(db.String(256))
-    rename = db.Column(db.String(256))
+    nickname = db.Column(db.String(128))
+    rename = db.Column(db.String(128))
+    password_hash = db.Column(db.String(128))
     imgurl = db.Column(db.String(256))
     fromwhere = db.Column(db.String(128))
     vip = db.Column(db.Boolean, default=False)

@@ -1,8 +1,8 @@
-from flask_restful import Resource
+from flask_restful import Resource, abort
 from flask_httpauth import HTTPBasicAuth
 from flask import g
 from ..models import Admin
-from . import admin_api
+from . import admin_api_bp, admin_api
 
 auth = HTTPBasicAuth()
 
@@ -16,9 +16,14 @@ def verify_password(username_or_token, password):
     g.admin_user = admin_user
     return True
 
+@admin_api_bp.before_request
+@auth.login_required
+def before_request():
+    pass
 
-class TodoItem(Resource):
+class GetToken(Resource):
     def get(self):
-        return 'This is api'
+        token = g.admin_user.generate_auth_token(600)
+        return {'token': token,'expiration': 600}
 
-admin_api.add_resource(TodoItem, '/todo')
+admin_api.add_resource(GetToken, '/token')

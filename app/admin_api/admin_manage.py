@@ -26,7 +26,7 @@ class SchoolList(Resource):
     @use_args(school_args)
     def post(self, args):
         if School.query.filter_by(name=args['name']).first():
-            return {'message': '学校名称已经存在', 'status': 409 },409
+            abort(409, message='学校名称已经存在', code=1001)
         school = School(name=args['name'], intro=args['intro'], admin=args['admin'])
         db.session.add(school)
         db.session.commit()

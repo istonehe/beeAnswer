@@ -1,11 +1,10 @@
-from flask_restful import Resource, abort
-from webargs import fields
+from flask_restful import Resource, abort, marshal_with, fields as rfields
+from webargs import fields, ValidationError
 from webargs.flaskparser import use_args
 from sqlalchemy.exc import IntegrityError
 from ..models import Admin, School
 from .. import db
 from . import admin_api_bp, admin_api
-
 
 hello_args = {
     'name': fields.Str(required = True),
@@ -13,9 +12,20 @@ hello_args = {
 }
 
 school_args = {
-    'name': fields.Str(required = True),
+    'name': fields.Str(required = True, validate=lambda p: len(p) >= 3),
     'intro': fields.Str(required = False, default=''),
-    'admin': fields.Str(required = True)
+    'admin_email': fields.Email(required = True)
+}
+
+schoollist_outputs={
+
+}
+
+school_outputs = {
+    'name': rfields.String,
+    'intro': rfields.String,
+    'admin': rfields.String,
+    'url': rfields.Url(absolute=True)
 }
 
 class SchoolList(Resource):
@@ -23,13 +33,13 @@ class SchoolList(Resource):
     def get(self, args):
         return 'Hello' + args['name'] + args['age']
 
+    @marshal_with(school_outputs, envelope='resource')
     @use_args(school_args)
     def post(self, args):
-        if School.query.filter_by(name=args['name']).first():
-            abort(409, message='学校名称已经存在', code=1001)
-        school = School(name=args['name'], intro=args['intro'], admin=args['admin'])
+        school = School(name=args['name'], intro=args['intro'], admin=args['admin_email'])
         db.session.add(school)
         db.session.commit()
-        return 'ok'
+        result = School.query.get(school.id)
+        return result,201
 
 admin_api.add_resource(SchoolList, '/school')

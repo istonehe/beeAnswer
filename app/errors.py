@@ -1,12 +1,14 @@
+from flask_restful import abort
+from sqlalchemy.exc import IntegrityError
+from .admin_api import admin_api_bp
+
+class ValidationError(ValueError, IntegrityError):
+    pass
+
+def bad_request(message):
+    abort(400, error = '错误的请求', message = message)
 
 
-def make_error(status_code, sub_code, message, action):
-    resp = {
-        'error':{
-            'status': status_code,
-            'code': sub_code,
-            'message': message,
-            'action': action
-        }
-    }
-    return resp
+@admin_api_bp.errorhandler(IntegrityError)
+def validation_error(e):
+    return bad_request(e.args[0])

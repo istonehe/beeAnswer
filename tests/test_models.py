@@ -1,7 +1,7 @@
 import unittest
 import time
 from app import create_app, db
-from app.models import Admin
+from app.models import Admin, Teacher
 
 class ModelTestCase(unittest.TestCase):
     def setUp(self):
@@ -10,6 +10,7 @@ class ModelTestCase(unittest.TestCase):
     def tearDown(self):
         db.drop_all()
 
+    #admin
     def test_admin_password_setter(self):
         u = Admin(password = 'cat')
         self.assertTrue(u.password_hash is not None)
@@ -53,4 +54,47 @@ class ModelTestCase(unittest.TestCase):
         time.sleep(2)
         self.assertFalse(u.verify_auth_token(token) == u)
 
-        
+
+    #teacher
+    def test_teacher_password_setter(self):
+        u = Teacher(password = 'cat')
+        self.assertTrue(u.password_hash is not None)
+
+    def test_teacher_no_password_getter(self):
+        u = Teacher(password = 'cat')
+        with self.assertRaises(AttributeError):
+            u.password
+
+    def test_teacher_password_verification(self):
+        u = Teacher(password = 'cat')
+        self.assertTrue(u.verify_password('cat'))
+        self.assertFalse(u.verify_password('dog'))
+
+    def test_password_salts_are_random(self):
+        u = Teacher(password = 'cat')
+        u2 = Teacher(password = 'cat')
+        self.assertTrue(u.password_hash != u2.password_hash)
+
+    def test_teacher_valid_confirmation_token(self):
+        u = Teacher(password = 'cat')
+        db.session.add(u)
+        db.session.commit()
+        token = u.generate_auth_token()
+        self.assertTrue(u.verify_auth_token(token) == u)
+
+    def test_teacher_invalid_confirmation_token(self):
+        u1 = Teacher(password = 'cat')
+        u2 = Teacher(password = 'dog')
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.commit()
+        token = u1.generate_auth_token()
+        self.assertFalse(u2.verify_auth_token(token) == u2)
+
+    def test_teacher_expired_confirmation_token(self):
+        u = Teacher(password = 'cat')
+        db.session.add(u)
+        db.session.commit()
+        token = u.generate_auth_token(1)
+        time.sleep(2)
+        self.assertFalse(u.verify_auth_token(token) == u)

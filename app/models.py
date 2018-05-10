@@ -71,8 +71,8 @@ class Teacher(db.Model):
     password_hash = db.Column(db.String(128))
     intro = db.Column(db.Text)
     imgurl = db.Column(db.String(256))
-    email = db.Column(db.String(64), unique=True, index=True)
-    telephone = db.Column(db.String(16), unique=True)
+    email = db.Column(db.String(64), unique=True)
+    telephone = db.Column(db.String(16), unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
     wxopenid = db.Column(db.String(32), unique=True)
     answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
@@ -80,6 +80,33 @@ class Teacher(db.Model):
                                 secondary=employs,
                                 backref=db.backref('teachers', lazy='dynamic'),
                                 lazy='dynamic')
+
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    #验证密码哈希串
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    #生成token
+    def generate_auth_token(self, expiration=600):
+        s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'id' : self.id}).decode('utf-8')
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        teacher_user = Teacher.query.get(data['id'])
+        return teacher_user
 
 
 class Student(db.Model):

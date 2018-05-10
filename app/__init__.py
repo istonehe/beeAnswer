@@ -14,7 +14,10 @@ def create_app(config_name):
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
-    from .admin_api import admin_api_bp as api_blueprint
-    app.register_blueprint(api_blueprint, url_prefix='/v1/admin')
+    from .admin_api import admin_api_bp as admin_api_blueprint
+    app.register_blueprint(admin_api_blueprint, url_prefix='/v1/admin')
+
+    from .school_api import school_api_bp as school_api_blueprint
+    app.register_blueprint(school_api_blueprint, url_prefix='/v1/school')
 
     return app

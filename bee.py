@@ -1,14 +1,17 @@
-import os, click
-from flask_migrate import Migrate, MigrateCommand
+import os
+import click
+from flask_migrate import Migrate
 from app import create_app, db
-from app.models import Admin, School, Course, Teacher, Student, Ask, Answer, Topicimage, Feedback
+from app.models import Admin, School, Tcode, Course, Teacher, Student, Ask, Answer, Topicimage, Feedback
 
 app = create_app(os.getenv('FLASK_ENV') or 'default')
 migrate = Migrate(app, db)
 
+
 @app.shell_context_processor
 def make_shell_context():
-    return dict(db=db, Admin=Admin, School=School, Teacher=Teacher, Student=Student, Course=Course, Ask=Ask, Answer=Answer, Topicimage=Topicimage, Feedback=Feedback)
+    return dict(db=db, Admin=Admin, School=School, Tcode=Tcode, Teacher=Teacher, Student=Student, Course=Course, Ask=Ask, Answer=Answer, Topicimage=Topicimage, Feedback=Feedback)
+
 
 @app.cli.command()
 def test():
@@ -16,6 +19,7 @@ def test():
     import unittest
     tests = unittest.TestLoader().discover('tests')
     unittest.TextTestRunner(verbosity=2).run(tests)
+
 
 @app.cli.command()
 @click.option('--name', prompt='username')
@@ -29,4 +33,4 @@ def create_admin(name, password):
     admin = Admin(name=name, password=password)
     db.session.add(admin)
     db.session.commit()
-    click.echo('管理员 '+ name + ' 设置成功')
+    click.echo('管理员 ' + name + ' 设置成功')

@@ -4,7 +4,7 @@ from webargs import fields, ValidationError
 from sqlalchemy import func
 from webargs.flaskparser import use_args
 from sqlalchemy.exc import IntegrityError
-from ..models import Admin, School
+from ..models import Admin, School, Tcode
 from .. import db
 from . import admin_api_bp, admin_api
 
@@ -15,20 +15,20 @@ schoollist_get_args = {
 }
 
 school_args = {
-    'name': fields.Str(required = True, validate=lambda p: len(p) >= 3),
-    'intro': fields.Str(required = False, default='', missing=' '),
-    'admin_email': fields.Email(required = True)
+    'name': fields.Str(required=True, validate=lambda p: len(p) >= 3),
+    'intro': fields.Str(required=False, default='', missing=' '),
+    'admin_phone': fields.Str(required=True)
 }
 
 school_search = {
-    'name': fields.Str(required = True),
+    'name': fields.Str(required=True),
     'page': fields.Int(missing=1),
     'per_page': fields.Int(missing=10)
 }
 
 #marshal_with
-school_paging_list={
-    'schools':rfields.Nested({
+school_paging_list = {
+    'schools': rfields.Nested({
         'id': rfields.Integer,
         'name': rfields.String,
         'intro': rfields.String,
@@ -36,8 +36,8 @@ school_paging_list={
         'timestamp': rfields.DateTime(dt_format='rfc822'),
         'url': rfields.Url(absolute=True, endpoint='admin_api.school')
     }),
-    'prev':rfields.String,
-    'next':rfields.String,
+    'prev': rfields.String,
+    'next': rfields.String,
     'count': rfields.Integer
 }
 
@@ -55,10 +55,12 @@ school_test = {
     'name': rfields.String
 }
 
+
 def abort_if_scholl_doesnt_exist(id):
     count = db.session.query(func.count(School.id)).scalar()
     if id < 0 or id > count:
-        abort(404, error = '错误的请求', message = '学校不存在', code=1001)
+        abort(404, error='错误的请求', message='学校不存在', code=1001)
+
 
 class SchoolList(Resource):
     @marshal_with(school_paging_list, envelope='resource')
@@ -75,22 +77,23 @@ class SchoolList(Resource):
         if pagination.has_next:
             next = url_for('admin_api.school', id=args['page']+1, _external=True)
         result = {
-        'schools':schools,
-        'prev': prev,
-        'next': next,
-        'count': pagination.total
+            'schools': schools,
+            'prev': prev,
+            'next': next,
+            'count': pagination.total
         }
-        return result,200
-
+        return result, 200
 
     @marshal_with(school_created, envelope='resource')
     @use_args(school_args)
     def post(self, args):
-        school = School(name=args['name'], intro=args['intro'], admin=args['admin_email'])
+        school = School(name=args['name'], intro=args['intro'], admin=args['admin_phone'])
         db.session.add(school)
         db.session.commit()
         result = School.query.get(school.id)
+        Tcode.generate_code(10, school.id)
         return result, 201
+
 
 class Schoolx(Resource):
     @marshal_with(school_created, envelope='resource')
@@ -104,7 +107,7 @@ class Schoolx(Resource):
         school = School.query.get(id)
         db.session.delete(school)
         db.session.commit()
-        return '',204
+        return '', 204
 
     @marshal_with(school_created, envelope='resource')
     @use_args(school_args)
@@ -113,11 +116,12 @@ class Schoolx(Resource):
         school = School.query.get(id)
         school.name = args['name']
         school.intro = args['intro']
-        school.admin = args['admin_email']
+        school.admin = args['admin_phone']
         db.session.add(school)
         db.session.commit()
         result = School.query.get(school.id)
         return result, 201
+
 
 class SchoolSearch(Resource):
     @marshal_with(school_paging_list, envelope='resource')
@@ -132,12 +136,12 @@ class SchoolSearch(Resource):
         if pagination.has_next:
             next = url_for('admin_api.school', id=args['page']+1, _external=True)
         result = {
-        'schools':schools,
-        'prev': prev,
-        'next': next,
-        'count': pagination.total
+            'schools': schools,
+            'prev': prev,
+            'next': next,
+            'count': pagination.total
         }
-        return result,200
+        return result, 200
 
 
 admin_api.add_resource(SchoolList, '/school', endpoint='schools')

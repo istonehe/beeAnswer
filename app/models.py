@@ -88,7 +88,7 @@ class School(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     courses = db.relationship('Course', backref='school', lazy='dynamic')
-    tcodes = db.relationship('Tcode', backref='school', lazy='select')
+    tcodes = db.relationship('Tcode', backref='school', lazy='dynamic')
 
 
 class Teacher(db.Model):
@@ -119,11 +119,11 @@ class Teacher(db.Model):
     def password(self, password):
         self.password_hash = generate_password_hash(password)
 
-    #验证密码哈希串
+    # 验证密码哈希串
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    #生成token
+    # 生成token
     def generate_auth_token(self, expiration=600):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'id': self.id}).decode('utf-8')
@@ -142,7 +142,7 @@ class Teacher(db.Model):
 class Tcode(db.Model):
     __tablename__ = 'tcodes'
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(10))
+    code = db.Column(db.String(16),  unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
 
@@ -154,10 +154,10 @@ class Tcode(db.Model):
             return ''.join([random.choice(x) for i in range(y)])
 
         for index in range(quantity):
-            c = random_code(stringbase, 8)
+            c = random_code(stringbase, 12)
             c = Tcode(code=c, school_id=school_id)
             db.session.add(c)
-       
+     
         db.session.commit()
 
 

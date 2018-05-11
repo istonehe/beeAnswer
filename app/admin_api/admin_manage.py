@@ -1,14 +1,15 @@
+import re
 from flask import url_for
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from webargs import fields, ValidationError
 from sqlalchemy import func
 from webargs.flaskparser import use_args
 from sqlalchemy.exc import IntegrityError
-from ..models import Admin, School, Tcode
+from ..models import School, Tcode
 from .. import db
-from . import admin_api_bp, admin_api
+from . import admin_api
 
-#use_args
+# use_args
 schoollist_get_args = {
     'page': fields.Int(missing=1),
     'per_page': fields.Int(missing=10)
@@ -17,7 +18,10 @@ schoollist_get_args = {
 school_args = {
     'name': fields.Str(required=True, validate=lambda p: len(p) >= 3),
     'intro': fields.Str(required=False, default='', missing=' '),
-    'admin_phone': fields.Str(required=True)
+    'admin_phone': fields.Str(
+        required=True,
+        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+    )
 }
 
 school_search = {
@@ -26,7 +30,7 @@ school_search = {
     'per_page': fields.Int(missing=10)
 }
 
-#marshal_with
+# marshal_with
 school_paging_list = {
     'schools': rfields.Nested({
         'id': rfields.Integer,

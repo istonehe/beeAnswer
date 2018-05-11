@@ -1,4 +1,4 @@
-from flask_restful import Resource, abort
+from flask_restful import Resource
 from flask_httpauth import HTTPBasicAuth
 from flask import g
 from ..models import Admin

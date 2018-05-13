@@ -1,7 +1,8 @@
 import string
 import random
 from datetime import datetime
-from flask import current_app, request, g
+from flask import current_app, g
+from flask_restful import abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from . import db
@@ -26,11 +27,11 @@ class Admin(db.Model):
     def password(self, password):
         self.password_hash = generate_password_hash(password)
 
-#验证密码哈希串
+# 验证密码哈希串
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-#生成token
+# 生成token
     def generate_auth_token(self, expiration=600):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'id': self.id}).decode('utf-8')
@@ -87,8 +88,17 @@ class School(db.Model):
     admin = db.Column(db.String(64))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
-    courses = db.relationship('Course', backref='school', lazy='dynamic')
-    tcodes = db.relationship('Tcode', backref='school', lazy='dynamic')
+    courses = db.relationship(
+        'Course',
+        backref='school',
+        lazy='dynamic'
+    )
+    tcodes = db.relationship(
+        'Tcode',
+        backref='school',
+        lazy='dynamic',
+        cascade="all, delete, delete-orphan"
+    )
 
 
 class Teacher(db.Model):
@@ -103,6 +113,7 @@ class Teacher(db.Model):
     telephone = db.Column(db.String(16), unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
     wxopenid = db.Column(db.String(32), unique=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
     schools = db.relationship(
         'School',
@@ -138,6 +149,10 @@ class Teacher(db.Model):
         teacher_user = Teacher.query.get(data['id'])
         return teacher_user
 
+    def is_teacher_admin(school_id):
+        school = School.query.get(school_id)
+        return school.admin == g.teacher_user.telephone
+
 
 class Tcode(db.Model):
     __tablename__ = 'tcodes'
@@ -148,6 +163,10 @@ class Tcode(db.Model):
 
     @staticmethod
     def generate_code(quantity, school_id):
+        school = School.query.get(school_id)
+        if school.tcodes.count() > 0:
+            abort(403, message="邀请码使用完才能重新生成", code='2003')
+
         stringbase = string.ascii_letters + string.digits
 
         def random_code(x, y):
@@ -157,7 +176,7 @@ class Tcode(db.Model):
             c = random_code(stringbase, 12)
             c = Tcode(code=c, school_id=school_id)
             db.session.add(c)
-     
+
         db.session.commit()
 
 

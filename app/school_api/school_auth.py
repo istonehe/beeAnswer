@@ -1,5 +1,5 @@
 import re
-from flask import url_for, g
+from flask import url_for, g, request
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
@@ -15,7 +15,7 @@ auth = HTTPBasicAuth()
 def verify_password(username_or_token, password):
     teacher_user = Teacher.verify_auth_token(username_or_token)
     if not teacher_user:
-        teacher_user = Teacher.query.filter_by(name=username_or_token).first()
+        teacher_user = Teacher.query.filter_by(telephone=username_or_token).first()
         if not teacher_user or not teacher_user.verify_password(password):
             return False
     g.teacher_user = teacher_user
@@ -42,7 +42,7 @@ teacher_reg = {
     ),
     'nickname': fields.String(required=True),
     'tcode': fields.String(required=True),
-    'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
+    'password': fields.String(required=True, validate=lambda p: len(p) >= 6)
 }
 
 
@@ -60,6 +60,7 @@ class TeacherReg(Resource):
     @marshal_with(teacher_info, envelope='resource')
     @use_args(teacher_reg)
     def post(self, args):
+        print(request.args)
         # 通过邀请码匹配学校并删除已经被使用的邀请码
         tcode = args['tcode']
         school = db.session.query(School).filter(
@@ -80,5 +81,5 @@ class TeacherReg(Resource):
         return result, 201
 
 
-school_api.add_resource(TeacherReg, '/register')
+school_api.add_resource(TeacherReg, '/register', endpoint='register')
 school_api.add_resource(GetToken, '/token')

@@ -302,9 +302,8 @@ class DismissTeacher(Resource):
         abort_if_teacher_doesnt_exist(t_id)
         school = School.query.get(s_id)
         teacher = Teacher.query.get(t_id)
-        if school.admin == teacher.telephone:
-            abort(401, message='不能解除管理员', code=1003)
-        pass
+        if teacher.is_employ(school):
+            school.teachers.remove(teacher)
 
 
 admin_api.add_resource(SchoolList, '/school', endpoint='schools')
@@ -314,3 +313,4 @@ admin_api.add_resource(SchoolSearch, '/school/search')
 admin_api.add_resource(TeacherList, '/teacher', endpoint='teachers')
 admin_api.add_resource(Teacherx, '/teacher/<int:id>', endpoint='teacher')
 admin_api.add_resource(TeacherSearch, '/teacher/search')
+admin_api.add_resource(DismissTeacher, '/dismiss')

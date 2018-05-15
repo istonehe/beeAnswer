@@ -152,6 +152,12 @@ class Teacher(db.Model):
     def is_teacher_admin(school_id):
         school = School.query.get(school_id)
         return school.admin == g.teacher_user.telephone
+    
+    def is_employ(self, school):
+        if school.id is None:
+            return False
+        return self.schools.filter_by(
+            school_id=school.id).first() is not None
 
     def is_employ(self, school_id):
         if School.query.get(school_id) is None:

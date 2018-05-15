@@ -73,7 +73,8 @@ class TeacherReg(Resource):
             password=args['password']
         )
         teacher.schools.append(school)
-        db.session.add(teacher)
+        school.teachers.append(teacher)
+        db.session.add_all([teacher, school])
         code = db.session.query(Tcode).filter_by(code=tcode).first()
         db.session.delete(code)
         db.session.commit()

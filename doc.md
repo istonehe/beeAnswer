@@ -13,6 +13,8 @@ admin_phone
 
     curl -u user:password -i -X POST -H "Content-Type: application/json" -d '{"name":"教学机构名称","intro":"这是一个教学机构","admin_phone":"13720331113"}' /v1/admin/school
 
+    http --json --auth user:password POST /v1/admin/school name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
+
 ### 查询学校列表
 v1/admin/school   get  
 page   第几页  （默认1）  
@@ -90,13 +92,9 @@ gender
 
 
 ### 解除教师与学校关系
-/v1/admin/school/dismiss   delete  
-如果该教师是学校管理员则无法解除  
+/v1/admin/dismiss   delete  
 
-    http --json --auth user:password DELETE /v1/admin/school/dismiss teacher_id=<id>
-
-
-
+    http --json --auth user:password DELETE /v1/admin/school/dismiss teacher_id=<id> school_id=<id>
 
 
 教学机构方
@@ -112,6 +110,7 @@ tcode
     curl -i -X POST -H "Content-Type: application/json" -d '{"telephone":"13712341234","nickname":"教师昵称","tcode":"7IBfG1dd","password":"123456"}' /v1/school/register
 
     http --json POST 127.0.0.1:5000/v1/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
+
 
 ### token获取
 curl -u user:password -i -X GET /v1/teacher/token

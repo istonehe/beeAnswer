@@ -119,7 +119,7 @@ class Teacher(db.Model):
         'School',
         secondary=employs,
         backref=db.backref('teachers', lazy='dynamic'),
-        lazy='dynamic'
+        lazy='select'
     )
 
     @property
@@ -152,6 +152,12 @@ class Teacher(db.Model):
     def is_teacher_admin(school_id):
         school = School.query.get(school_id)
         return school.admin == g.teacher_user.telephone
+
+    def is_employ(self, school_id):
+        if School.query.get(school_id) is None:
+            return False
+        return self.schools.filter_by(
+            id=school_id).first() is not None
 
 
 class Tcode(db.Model):

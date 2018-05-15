@@ -109,11 +109,16 @@ teacher_paging_list = {
 teacher_created = {
     'id': rfields.Integer,
     'nickname': rfields.String,
-    'rename': rfields.String,
-    'imgurl': rfields.String,
+    'rename': rfields.String(default=' '),
+    'imgurl': rfields.String(default=' '),
     'telephone': rfields.String,
     'gender': rfields.String,
     'wxopenid': rfields.String,
+    'schools': rfields.Nested({
+        'id': rfields.Integer,
+        'name': rfields.String,
+        'url': rfields.Url(absolute=True, endpoint='admin_api.school')
+    }),
     'timestamp': rfields.DateTime(dt_format='rfc822'),
     'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
 }
@@ -121,7 +126,7 @@ teacher_created = {
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
-        abort(404, error='错误的请求', message='学校不存在', code=1001)
+        abort(404, message='学校不存在', code=1001)
 
 
 class SchoolList(Resource):
@@ -249,7 +254,7 @@ class TeacherList(Resource):
 
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
-        abort(404, error='错误的请求', message='教师不存在', code=1001)
+        abort(404, message='教师不存在', code=1001)
 
 
 class Teacherx(Resource):
@@ -302,9 +307,12 @@ class DismissTeacher(Resource):
         abort_if_teacher_doesnt_exist(t_id)
         school = School.query.get(s_id)
         teacher = Teacher.query.get(t_id)
-        if school.admin == teacher.telephone:
-            abort(401, message='不能解除管理员', code=1003)
-        pass
+        if teacher.is_employ(s_id):
+            print(s_id, t_id)
+            school.teachers.remove(teacher)
+            db.session.commit()
+            return '', 204
+        abort(401, message='该学校没有这个教师', code=1001)
 
 
 admin_api.add_resource(SchoolList, '/school', endpoint='schools')
@@ -314,3 +322,4 @@ admin_api.add_resource(SchoolSearch, '/school/search')
 admin_api.add_resource(TeacherList, '/teacher', endpoint='teachers')
 admin_api.add_resource(Teacherx, '/teacher/<int:id>', endpoint='teacher')
 admin_api.add_resource(TeacherSearch, '/teacher/search')
+admin_api.add_resource(DismissTeacher, '/dismiss')

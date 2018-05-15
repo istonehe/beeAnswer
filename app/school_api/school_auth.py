@@ -81,5 +81,9 @@ class TeacherReg(Resource):
         return result, 201
 
 
+class Teacher(Resource):
+    pass
+
+
 school_api.add_resource(TeacherReg, '/register', endpoint='register')
 school_api.add_resource(GetToken, '/token')

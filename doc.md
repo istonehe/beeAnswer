@@ -13,6 +13,8 @@ admin_phone
 
     curl -u user:password -i -X POST -H "Content-Type: application/json" -d '{"name":"教学机构名称","intro":"这是一个教学机构","admin_phone":"13720331113"}' /v1/admin/school
 
+    http --json --auth user:password POST /v1/admin/school name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
+
 ### 查询学校列表
 v1/admin/school   get  
 page   第几页  （默认1）  
@@ -92,14 +94,15 @@ gender
 ### 解除教师与学校关系
 /v1/admin/dismiss   delete  
 
-    http --json --auth user:password DELETE /v1/admin/school/dismiss teacher_id=<id> school_id=<id>
+    http --json --auth user:password DELETE /v1/admin/dismiss teacher_id=<id> school_id=<id>
+
 
 
 教学机构方
 ------
 ******
 
-### 老师注册
+### 教师注册
 v1/teacher/register  
 telephone  
 nickname  
@@ -112,3 +115,15 @@ tcode
 
 ### token获取
 curl -u user:password -i -X GET /v1/teacher/token
+
+
+### 教师加入学校
+v1/school/bind
+
+    http --json --auth teacher:password PUT /v1/school/bind tcode=<str>
+
+
+### 管理课程
+v1/school/course
+
+    http --json --aut teacher:password POST /v1/school/course school_id=<int> course_name=<str> course_intro=<str> nomal_times=<int> vip_times=<int>

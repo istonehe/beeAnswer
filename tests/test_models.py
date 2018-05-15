@@ -113,10 +113,27 @@ class ModelTestCase(unittest.TestCase):
         try:
             Tcode.generate_code(10, s.id)
         except Exception as e:
-            print("是的，生成新邀请码失败")
+            print("是的，拒绝生成新邀请码")
         self.assertTrue(s.tcodes.count() == 10)
     
-    def test_teacher_is_school_admin(self):
-        s = School(name='aschool',admin='13700000000')
+    def test_teacher_is_employ_and_dissmiss(self):
         t = Teacher(telephone='13700000000')
-        pass
+        s = School(name='aschool')
+        t.schools.append(s)
+        db.session.add_all([t, s])
+        db.session.commit()
+        self.assertTrue(t.is_employ(s.id))
+        t.dismiss_school(s.id)
+        self.assertFalse(t.is_employ(s.id))
+
+    def test_teacher_bind_school(self):
+        t = Teacher(telephone='13700000000')
+        s = School(name='aschool')
+        db.session.add_all([t, s])
+        db.session.commit()
+        Tcode.generate_code(10, s.id)
+        tcode = Tcode.query.all()[0].code
+        t.bind_school(tcode)
+        self.assertTrue(t.schools[0].id == s.id)
+        self.assertTrue(Tcode.query.filter_by(code=tcode).first() is None)
+

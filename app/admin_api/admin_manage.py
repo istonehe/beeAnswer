@@ -5,7 +5,7 @@ from webargs import fields, ValidationError
 from sqlalchemy import func
 from webargs.flaskparser import use_args
 from sqlalchemy.exc import IntegrityError
-from ..models import School, Tcode, Teacher
+from ..models import School, Tcode, Teacher, Course
 from .. import db
 from . import admin_api
 
@@ -109,11 +109,16 @@ teacher_paging_list = {
 teacher_created = {
     'id': rfields.Integer,
     'nickname': rfields.String,
-    'rename': rfields.String,
-    'imgurl': rfields.String,
+    'rename': rfields.String(default=' '),
+    'imgurl': rfields.String(default=' '),
     'telephone': rfields.String,
     'gender': rfields.String,
     'wxopenid': rfields.String,
+    'schools': rfields.Nested({
+        'id': rfields.Integer,
+        'name': rfields.String,
+        'url': rfields.Url(absolute=True, endpoint='admin_api.school')
+    }),
     'timestamp': rfields.DateTime(dt_format='rfc822'),
     'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
 }
@@ -121,7 +126,7 @@ teacher_created = {
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
-        abort(404, error='错误的请求', message='学校不存在', code=1001)
+        abort(404, message='学校不存在', code=1001)
 
 
 class SchoolList(Resource):
@@ -154,6 +159,15 @@ class SchoolList(Resource):
         db.session.commit()
         result = School.query.get(school.id)
         Tcode.generate_code(10, school.id)
+        course = Course(
+            course_name='这是一个课程案例',
+            course_intro='请填写一些课程介绍',
+            nomal_times=5,
+            vip_times=0,
+            school_id=school.id
+        )
+        db.session.add(course)
+        db.session.commit()
         return result, 201
 
 
@@ -249,7 +263,7 @@ class TeacherList(Resource):
 
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
-        abort(404, error='错误的请求', message='教师不存在', code=1001)
+        abort(404, message='教师不存在', code=1001)
 
 
 class Teacherx(Resource):
@@ -300,10 +314,9 @@ class DismissTeacher(Resource):
         t_id = args['teacher_id']
         abort_if_scholl_doesnt_exist(s_id)
         abort_if_teacher_doesnt_exist(t_id)
-        school = School.query.get(s_id)
         teacher = Teacher.query.get(t_id)
-        if teacher.is_employ(school):
-            school.teachers.remove(teacher)
+        teacher.dismiss_school(s_id)
+        return '', 204
 
 
 admin_api.add_resource(SchoolList, '/school', endpoint='schools')

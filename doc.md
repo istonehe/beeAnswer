@@ -94,14 +94,15 @@ gender
 ### 解除教师与学校关系
 /v1/admin/dismiss   delete  
 
-    http --json --auth user:password DELETE /v1/admin/school/dismiss teacher_id=<id> school_id=<id>
+    http --json --auth user:password DELETE /v1/admin/dismiss teacher_id=<id> school_id=<id>
+
 
 
 教学机构方
 ------
 ******
 
-### 老师注册
+### 教师注册
 v1/teacher/register  
 telephone  
 nickname  
@@ -114,3 +115,15 @@ tcode
 
 ### token获取
 curl -u user:password -i -X GET /v1/teacher/token
+
+
+### 教师加入学校
+v1/school/bind
+
+    http --json --auth teacher:password PUT /v1/school/bind tcode=<str>
+
+
+### 管理课程
+v1/school/course
+
+    http --json --aut teacher:password POST /v1/school/course school_id=<int> course_name=<str> course_intro=<str> nomal_times=<int> vip_times=<int>

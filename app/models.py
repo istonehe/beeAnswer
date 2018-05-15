@@ -101,6 +101,7 @@ class School(db.Model):
     )
 
 
+
 class Teacher(db.Model):
     __tablename__ = 'teachers'
     id = db.Column(db.Integer, primary_key=True)
@@ -151,20 +152,37 @@ class Teacher(db.Model):
 
     def is_teacher_admin(school_id):
         school = School.query.get(school_id)
-        return school.admin == g.teacher_user.telephone
-    
-    def is_employ(self, school):
-        if school.id is None:
-            return False
-        return self.schools.filter_by(
-            school_id=school.id).first() is not None
+        return self.telephone == school.admin 
 
     def is_employ(self, school_id):
-        if School.query.get(school_id) is None:
+        school = School.query.get(school_id)
+        if school is None:
             return False
-        return self.schools.filter_by(
-            id=school_id).first() is not None
+        return school.teachers.filter_by(id=self.id).first() is not None
 
+    def bind_school(self, tcode):
+        school = db.session.query(School).filter(
+            School.tcodes.any(Tcode.code == tcode)).first()
+        if not school:
+            abort(404, message="邀请码不正确，请联系您的机构或学校")
+        if self.is_employ(school.id):
+            abort(401, message="你已经是这个学校的老师")
+        self.schools.append(school)
+        db.session.add(self)
+        db.session.commit()
+        code = db.session.query(Tcode).filter_by(code=tcode).first()
+        db.session.delete(code)
+        db.session.commit()
+        return True
+
+    def dismiss_school(self, school_id):
+        school = School.query.get(school_id)
+        if self.is_employ(school_id):
+            self.schools.remove(school)
+            db.session.commit()
+            return True
+        abort(401, message='该学校没有这个教师', code=1001)
+        
 
 class Tcode(db.Model):
     __tablename__ = 'tcodes'

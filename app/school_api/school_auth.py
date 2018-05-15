@@ -1,12 +1,12 @@
 import re
-from flask import url_for, g, request
-from flask_restful import Resource, abort, marshal_with, fields as rfields
+from flask import g
+from flask_restful import Resource, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
 from webargs.flaskparser import use_args
-from ..models import Teacher, School, Tcode
+from ..models import Teacher
 from .. import db
-from . import school_api_bp, school_api
+from . import school_api
 
 auth = HTTPBasicAuth()
 
@@ -45,6 +45,10 @@ teacher_reg = {
     'password': fields.String(required=True, validate=lambda p: len(p) >= 6)
 }
 
+teacher_tcode = {
+    'tcode': fields.String(required=True)
+}
+
 
 # marshal_with
 teacher_info = {
@@ -60,31 +64,28 @@ class TeacherReg(Resource):
     @marshal_with(teacher_info, envelope='resource')
     @use_args(teacher_reg)
     def post(self, args):
-        print(request.args)
-        # 通过邀请码匹配学校并删除已经被使用的邀请码
         tcode = args['tcode']
-        school = db.session.query(School).filter(
-            School.tcodes.any(Tcode.code == tcode)).first()
-        if not school:
-            abort(404, message="邀请码不正确，请联系您的机构或学校", code='2001')
         teacher = Teacher(
             telephone=args['telephone'],
             nickname=args['nickname'],
             password=args['password']
         )
-        teacher.schools.append(school)
-        school.teachers.append(teacher)
-        db.session.add_all([teacher, school])
-        code = db.session.query(Tcode).filter_by(code=tcode).first()
-        db.session.delete(code)
-        db.session.commit()
-        result = Teacher.query.get(teacher.id)
-        return result, 201
+        db.session.add(teacher)
+        # 通过邀请码匹配学校并删除已经被使用的邀请码
+        if teacher.bind_school(tcode):
+            result = Teacher.query.get(teacher.id)
+            return result, 201
 
 
-class Teacher(Resource):
-    pass
+class TeacherBindSchool(Resource):
+    @auth.login_required
+    @use_args(teacher_tcode)
+    def put(self, args):
+        tcode = args['tcode']
+        if g.teacher_user.bind_school(tcode):
+            return '已加入学校', 201
 
 
 school_api.add_resource(TeacherReg, '/register', endpoint='register')
 school_api.add_resource(GetToken, '/token')
+school_api.add_resource(TeacherBindSchool, '/bind')

@@ -305,14 +305,9 @@ class DismissTeacher(Resource):
         t_id = args['teacher_id']
         abort_if_scholl_doesnt_exist(s_id)
         abort_if_teacher_doesnt_exist(t_id)
-        school = School.query.get(s_id)
         teacher = Teacher.query.get(t_id)
-        if teacher.is_employ(s_id):
-            print(s_id, t_id)
-            school.teachers.remove(teacher)
-            db.session.commit()
-            return '', 204
-        abort(401, message='该学校没有这个教师', code=1001)
+        teacher.dismiss_school(s_id)
+        return '', 204
 
 
 admin_api.add_resource(SchoolList, '/school', endpoint='schools')

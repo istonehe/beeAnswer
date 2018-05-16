@@ -30,6 +30,7 @@ course_set = {
     'vip_times': fields.Int(missing=-1, validate=lambda x: x >= -1)
 }
 
+
 # marshal_with
 course_info = {
     'id': rfields.Integer,
@@ -39,10 +40,45 @@ course_info = {
     'vip_times': rfields.Integer
 }
 
+school_info = {
+    'id': rfields.Integer,
+    'name': rfields.String,
+    'intro': rfields.String,
+    'teachercount': rfields.Integer,
+    'studentcount': rfields.Integer,
+    'teacherslist': rfields.Nested({
+        'id': rfields.Integer,
+        'nickname': rfields.String,
+        'rename': rfields.String,
+        'intro': rfields.String,
+        'imgurl': rfields.String,
+        'email': rfields.String,
+        'telephone': rfields.Integer,
+        'gender': rfields.Integer
+    })
+}
+
+teacher_info = {
+    'id': rfields.Integer,
+    'nickname': rfields.String,
+    'rename': rfields.String,
+    'intro': rfields.String,
+    'imgurl': rfields.String,
+    'email': rfields.String,
+    'telephone': rfields.Integer,
+    'gender': rfields.Integer,
+    'answercount': rfields.Integer
+}
+
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
         abort(404, message='学校不存在')
+
+
+def abort_if_teacher_doesnt_exist(id):
+    if Teacher.query.get(id) is None:
+        abort(404, message='教师不存在')
 
 
 class Coursex(Resource):
@@ -51,12 +87,12 @@ class Coursex(Resource):
     @use_args(course_set)
     def put(self, args):
         s_id = args['school_id']
-        c_name = args['course_id']
+        c_name = args['course_name']
         c_intro = args['course_intro']
         n_times = args['nomal_times']
         v_times = args['vip_times']
         abort_if_scholl_doesnt_exist(s_id)
-        if g.current_user.is_teacher_admin(s_id) is False:
+        if g.teacher_user.is_teacher_admin(s_id) is False:
             abort(401, message='没有学校管理员权限')
         course = School.query.get(9).courses.first()
         course.course_name = c_name
@@ -68,4 +104,35 @@ class Coursex(Resource):
         return course, 201
 
 
+class SchoolDetail(Resource):
+    @auth.login_required
+    @marshal_with(school_info, envelope='resource')
+    def get(self, s_id):
+        abort_if_scholl_doesnt_exist(s_id)
+        if g.teacher_user.is_employ(s_id) is False:
+            abort(401, message='不是这个学校的老师')
+        school = School.query.get(s_id)
+        school.teacherslist = school.teachers.all()
+        school.teachercount = school.teachers.count()
+        school.studentcount = school.students.count()
+        return school, 200
+
+
+class TeacherDetail(Resource):
+    @auth.login_required
+    @marshal_with(teacher_info, envelope='resource')
+    def get(self, s_id, t_id):
+        abort_if_teacher_doesnt_exist(t_id)
+        abort_if_scholl_doesnt_exist(s_id)
+        if g.teacher_user.is_employ(s_id) is False:
+            abort(401, message='你不是这个学校的老师')
+        teacher = Teacher.query.get(t_id)
+        if teacher.is_employ(s_id) is False:
+            abort(401, message='他/她不是这个学校的老师')
+        teacher.answerscount = teacher.answers.count()
+        return teacher, 200
+
+
 school_api.add_resource(Coursex, '/course', endpoint='coures')
+school_api.add_resource(SchoolDetail, '/<s_id>', endpoint='school')
+school_api.add_resource(TeacherDetail, '/<s_id>/<t_id>', endpoint='teacher')

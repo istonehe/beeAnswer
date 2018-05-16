@@ -126,7 +126,7 @@ teacher_created = {
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
-        abort(404, message='学校不存在', code=1001)
+        abort(404, message='学校不存在')
 
 
 class SchoolList(Resource):
@@ -263,7 +263,7 @@ class TeacherList(Resource):
 
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
-        abort(404, message='教师不存在', code=1001)
+        abort(404, message='教师不存在')
 
 
 class Teacherx(Resource):
@@ -319,11 +319,11 @@ class DismissTeacher(Resource):
         return '', 204
 
 
-admin_api.add_resource(SchoolList, '/school', endpoint='schools')
+admin_api.add_resource(SchoolList, '/schools', endpoint='schools')
 admin_api.add_resource(Schoolx, '/school/<int:id>', endpoint='school')
-admin_api.add_resource(SchoolSearch, '/school/search')
+admin_api.add_resource(SchoolSearch, '/schools/search')
 
-admin_api.add_resource(TeacherList, '/teacher', endpoint='teachers')
+admin_api.add_resource(TeacherList, '/teachers', endpoint='teachers')
 admin_api.add_resource(Teacherx, '/teacher/<int:id>', endpoint='teacher')
-admin_api.add_resource(TeacherSearch, '/teacher/search')
+admin_api.add_resource(TeacherSearch, '/teachers/search')
 admin_api.add_resource(DismissTeacher, '/dismiss')

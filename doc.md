@@ -11,16 +11,16 @@ name
 intro (可选)  
 admin_phone  
 
-    curl -u user:password -i -X POST -H "Content-Type: application/json" -d '{"name":"教学机构名称","intro":"这是一个教学机构","admin_phone":"13720331113"}' /v1/admin/school
+    curl -u user:password -i -X POST -H "Content-Type: application/json" -d '{"name":"教学机构名称","intro":"这是一个教学机构","admin_phone":"13720331113"}' /v1/admin/schools
 
-    http --json --auth user:password POST /v1/admin/school name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
+    http --json --auth user:password POST /v1/admin/schools name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
 
 ### 查询学校列表
 v1/admin/school   get  
 page   第几页  （默认1）  
 per_page   每页多少条  （默认10）
 
-    curl -u user:password -i -X GET -H "Content-Type: application/json" /v1/admin/school\?page\=2\&per_page\=4
+    curl -u user:password -i -X GET -H "Content-Type: application/json" /v1/admin/schools\?page\=2\&per_page\=4
 
 ### 查询学校
 v1/admin/school/id   get  
@@ -28,7 +28,7 @@ v1/admin/school/id   get
     curl -u user:password -i -X GET -H "Content-Type: application/json" /v1/admin/school/9
 
 ### 搜索学校
-/v1/admin/school/search?name=  
+/v1/admin/schools/search?name=  
 page   第几页  （默认1）  
 per_page   每页多少条  （默认10）
 
@@ -86,7 +86,7 @@ gender
 
 
 ### 搜索教师
-/v1/admin/teacher/search  get  
+/v1/admin/teachers/search  get  
 
     http --json --auth user:password GET /v1/admin/teacher/search telephone=13711111111
 
@@ -126,4 +126,16 @@ v1/school/bind
 ### 管理课程
 v1/school/course
 
-    http --json --aut teacher:password POST /v1/school/course school_id=<int> course_name=<str> course_intro=<str> nomal_times=<int> vip_times=<int>
+    http --json --auth teacher:password PUT /v1/school/course school_id=<int> course_name=<str> course_intro=<str> nomal_times=<int> vip_times=<int>
+
+
+### 查看本校详情
+v1/school/<int:s_id>
+
+    http --json --auth teacher:password GET :5000/v1/school/<int>
+
+
+### 查看老师详情
+v1/school/<int:s_id>/<int:t_id>
+
+    http --json --auth teacher:password GET :5000/v1/school/<int>/<int>

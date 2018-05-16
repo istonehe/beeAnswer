@@ -111,7 +111,7 @@ class Teacher(db.Model):
     intro = db.Column(db.Text)
     imgurl = db.Column(db.String(256))
     email = db.Column(db.String(64), unique=True)
-    telephone = db.Column(db.String(16), unique=True, index=True)
+    telephone = db.Column(db.Integer, unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
     wxopenid = db.Column(db.String(32), unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -150,15 +150,15 @@ class Teacher(db.Model):
         teacher_user = Teacher.query.get(data['id'])
         return teacher_user
 
-    def is_teacher_admin(self, school_id):
-        school = School.query.get(school_id)
-        return self.telephone == school.admin
-
     def is_employ(self, school_id):
         school = School.query.get(school_id)
         if school is None:
             return False
         return school.teachers.filter_by(id=self.id).first() is not None
+    
+    def is_teacher_admin(self, school_id):
+        school = School.query.get(school_id)
+        return self.telephone == school.admin and self.is_employ(school_id)
 
     def bind_school(self, tcode):
         school = db.session.query(School).filter(
@@ -182,7 +182,7 @@ class Teacher(db.Model):
             db.session.commit()
             return True
         abort(401, message='该学校没有这个教师', code=1001)
-        
+
 
 class Tcode(db.Model):
     __tablename__ = 'tcodes'
@@ -240,7 +240,7 @@ class Course(db.Model):
     course_name = db.Column(db.String(64))
     course_intro = db.Column(db.String(256))
     nomal_times = db.Column(db.Integer, default=5)
-    vip_times = db.Column(db.Integer, default=0)
+    vip_times = db.Column(db.Integer, default=-1)
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
 
 

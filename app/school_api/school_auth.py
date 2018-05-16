@@ -1,12 +1,12 @@
 import re
-from flask import g
+from flask import g, request, current_app
 from flask_restful import Resource, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
 from webargs.flaskparser import use_args
 from ..models import Teacher
 from .. import db
-from . import school_api
+from . import school_api, school_api_bp
 
 auth = HTTPBasicAuth()
 
@@ -22,12 +22,6 @@ def verify_password(username_or_token, password):
     return True
 
 
-# @school_api_bp.before_request
-# @auth.login_required
-# def before_request():
-#    pass
-
-
 class GetToken(Resource):
     def get(self):
         token = g.teacher_user.generate_auth_token(600)
@@ -36,17 +30,17 @@ class GetToken(Resource):
 
 # use_args
 teacher_reg = {
-    'telephone': fields.String(
+    'telephone': fields.Int(
         required=True,
-        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+        validate=lambda p: re.match('^1[34578]\\d{9}$', str(p)) is not None
     ),
-    'nickname': fields.String(required=True),
-    'tcode': fields.String(required=True),
-    'password': fields.String(required=True, validate=lambda p: len(p) >= 6)
+    'nickname': fields.Str(required=True),
+    'tcode': fields.Str(required=True),
+    'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
 }
 
 teacher_tcode = {
-    'tcode': fields.String(required=True)
+    'tcode': fields.Str(required=True)
 }
 
 

@@ -137,3 +137,12 @@ class ModelTestCase(unittest.TestCase):
         self.assertTrue(t.schools[0].id == s.id)
         self.assertTrue(Tcode.query.filter_by(code=tcode).first() is None)
 
+    def test_teacher_is_school_admin(self):
+        t = Teacher(telephone='13700000001')
+        s = School(name='aschool', admin='13700000001')
+        db.session.add_all([t, s])
+        db.session.commit()
+        self.assertFalse(t.is_teacher_admin(s.id))
+        t.schools.append(s)
+        db.session.commit()
+        self.assertTrue(t.is_teacher_admin(s.id))

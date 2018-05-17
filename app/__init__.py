@@ -21,4 +21,7 @@ def create_app(config_name):
     from .school_api import school_api_bp as school_api_blueprint
     app.register_blueprint(school_api_blueprint, url_prefix='/v1/school')
 
+    from .student_api import student_api_bp as student_api_blueprint
+    app.register_blueprint(student_api_blueprint, url_prefix='/v1/student')
+
     return app

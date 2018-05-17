@@ -80,6 +80,6 @@ class TeacherBindSchool(Resource):
             return '已加入学校', 201
 
 
-school_api.add_resource(TeacherReg, '/register', endpoint='register')
+school_api.add_resource(TeacherReg, '/register')
 school_api.add_resource(GetToken, '/token')
 school_api.add_resource(TeacherBindSchool, '/bind')

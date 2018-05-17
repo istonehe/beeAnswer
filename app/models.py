@@ -65,13 +65,29 @@ employs = db.Table(
 
 
 class SchoolStudent(db.Model):
-    __tablename__ = 'schools_students'
+    __tablename__ = 'school_student'
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), primary_key=True)
     vip_expire = db.Column(db.DateTime, default=datetime.utcnow)
     vip_times = db.Column(db.Integer, default=0)
     nomal_times = db.Column(db.Integer, default=5)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    school = db.relationship(
+        "School",
+        backref=db.backref(
+            "schools_students",
+            cascade="all, delete-orphan"
+        )
+    )
+
+    student = db.relationship(
+        "Student",
+        backref=db.backref(
+            "schools_students",
+            cascade="all,delete-orphan"
+        )
+    )
 
 
 class School(db.Model):
@@ -95,10 +111,9 @@ class School(db.Model):
         cascade="all, delete, delete-orphan"
     )
     students = db.relationship(
-        'SchoolStudent',
-        backref=db.backref('student', lazy='joined'),
-        lazy='dynamic',
-        cascade='all, delete-orphan'
+        'Student',
+        secondary="school_student",
+        lazy='dynamic'
     )
 
 
@@ -226,10 +241,9 @@ class Student(db.Model):
     asks = db.relationship('Ask', backref='student', lazy='dynamic')
     feedbacks = db.relationship('Feedback', backref='student', lazy='dynamic')
     schools = db.relationship(
-        'SchoolStudent',
-        backref=db.backref('school', lazy='joined'),
-        lazy='dynamic',
-        cascade='all, delete-orphan'
+        'School',
+        secondary="school_student",
+        lazy='dynamic'
     )
 
     @property

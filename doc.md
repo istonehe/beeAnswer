@@ -119,12 +119,18 @@ curl -u user:password -i -X GET /v1/teacher/token
 
 ### 教师加入学校
 v1/school/bind
+tcode  
 
     http --json --auth teacher:password PUT /v1/school/bind tcode=<str>
 
 
 ### 管理课程
 v1/school/course
+school_id=<int>  
+course_name=<str>  
+course_intro=<str>  
+nomal_times=<int>  
+vip_times=<int>
 
     http --json --auth teacher:password PUT /v1/school/course school_id=<int> course_name=<str> course_intro=<str> nomal_times=<int> vip_times=<int>
 
@@ -136,6 +142,24 @@ v1/school/<int:s_id>
 
 
 ### 查看老师详情
-v1/school/<int:s_id>/<int:t_id>
+v1/school/<int:s_id>/teacher/<int:t_id>  
 
-    http --json --auth teacher:password GET :5000/v1/school/<int>/<int>
+    http --json --auth teacher:password GET :5000/v1/<int>/teacher/<int>
+
+
+### 学校移除老师
+v1/school/dismiss  
+eacher_id  
+school_id  
+
+    http --json --auth 13700000021:123456 DELETE :5000/v1/school/dismiss teacher_id=1 school_id=1
+
+
+### 老师退出学校
+v1/school/teacher/dismiss  
+school_id  
+
+    http --json --auth teacher:password DELETE :5000/v1/school/teacher/dismiss school_id=1
+
+
+

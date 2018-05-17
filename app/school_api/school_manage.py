@@ -30,6 +30,19 @@ course_set = {
     'vip_times': fields.Int(missing=-1, validate=lambda x: x >= -1)
 }
 
+course_get = {
+    'school_id': fields.Int(required=True)
+}
+
+dismiss_teacher = {
+    'school_id': fields.Int(required=True),
+    'teacher_id': fields.Int(required=True)
+}
+
+teacher_dismiss = {
+    'school_id': fields.Int(required=True)
+}
+
 
 # marshal_with
 course_info = {
@@ -103,6 +116,17 @@ class Coursex(Resource):
         db.session.commit()
         return course, 201
 
+    @auth.login_required
+    @marshal_with(course_info, envelope='resource')
+    @use_args(course_get)
+    def get(self, args):
+        s_id = args['school_id']
+        abort_if_scholl_doesnt_exist(s_id)
+        if g.teacher_user.is_employ(s_id) is False:
+            abort(401, message='你不是这个学校的老师')
+        course = School.query.get(9).courses.first()
+        return course, 200
+
 
 class SchoolDetail(Resource):
     @auth.login_required
@@ -128,11 +152,46 @@ class TeacherDetail(Resource):
             abort(401, message='你不是这个学校的老师')
         teacher = Teacher.query.get(t_id)
         if teacher.is_employ(s_id) is False:
-            abort(401, message='他/她不是这个学校的老师')
+            abort(401, message='他/她不是这里的老师')
         teacher.answerscount = teacher.answers.count()
         return teacher, 200
 
 
-school_api.add_resource(Coursex, '/course', endpoint='coures')
+class DismissTeacher(Resource):
+    @auth.login_required
+    @use_args(dismiss_teacher)
+    def delete(self, args):
+        s_id = args['school_id']
+        t_id = args['teacher_id']
+        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_teacher_doesnt_exist(t_id)
+        school = School.query.get(s_id)
+        if g.teacher_user.is_teacher_admin(s_id) is False:
+            abort(401, message='没有学校管理员权限')
+        teacher = Teacher.query.get(t_id)
+        if teacher.telephone == school.admin:
+            abort(401, message='不能移除自己')
+        if teacher.is_employ(s_id) is False:
+            abort(401, message='他/她不是这里的老师')
+        teacher.dismiss_school(s_id)
+        return '', 204
+
+
+class TeacherDismiss(Resource):
+    @auth.login_required
+    @use_args(teacher_dismiss)
+    def delete(self, args):
+        s_id = args['school_id']
+        abort_if_scholl_doesnt_exist(s_id)
+        if g.teacher_user.is_employ(s_id) is False:
+            abort(401, message='你不是这里的老师')
+        g.teacher_user.dismiss_school(s_id)
+        return '', 204
+
+
+school_api.add_resource(Coursex, '/course', endpoint='course')
+
 school_api.add_resource(SchoolDetail, '/<s_id>', endpoint='school')
-school_api.add_resource(TeacherDetail, '/<s_id>/<t_id>', endpoint='teacher')
+school_api.add_resource(TeacherDetail, '/<s_id>/teacher/<t_id>', endpoint='teacher')
+school_api.add_resource(DismissTeacher, '/dismiss')
+school_api.add_resource(TeacherDismiss, '/teacher/dismiss')

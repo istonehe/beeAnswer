@@ -63,21 +63,15 @@ employs = db.Table(
         )
 )
 
-customers = db.Table(
-    'customers',
-    db.Column(
-        'school_id',
-        db.Integer,
-        db.ForeignKey('schools.id'),
-        primary_key=True
-    ),
-    db.Column(
-        'teacher_id',
-        db.Integer,
-        db.ForeignKey('students.id'),
-        primary_key=True
-    )
-)
+
+class SchoolStudent(db.Model):
+    __tablename__ = 'schools_students'
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'), primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('students.id'), primary_key=True)
+    vip_expire = db.Column(db.DateTime, default=datetime.utcnow)
+    vip_times = db.Column(db.Integer, default=0)
+    nomal_times = db.Column(db.Integer, default=5)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class School(db.Model):
@@ -85,7 +79,7 @@ class School(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), unique=True)
     intro = db.Column(db.Text)
-    admin = db.Column(db.String(64))
+    admin = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     courses = db.relationship(
@@ -99,6 +93,12 @@ class School(db.Model):
         backref='school',
         lazy='dynamic',
         cascade="all, delete, delete-orphan"
+    )
+    students = db.relationship(
+        'SchoolStudent',
+        backref=db.backref('student', lazy='joined'),
+        lazy='dynamic',
+        cascade='all, delete-orphan'
     )
 
 
@@ -155,7 +155,7 @@ class Teacher(db.Model):
         if school is None:
             return False
         return school.teachers.filter_by(id=self.id).first() is not None
-    
+
     def is_teacher_admin(self, school_id):
         school = School.query.get(school_id)
         return self.telephone == school.admin and self.is_employ(school_id)
@@ -215,23 +215,49 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(128))
     rename = db.Column(db.String(128))
+    telephone = (db.Integer)
     password_hash = db.Column(db.String(128))
     imgurl = db.Column(db.String(256))
     fromwhere = db.Column(db.String(128))
-    vip = db.Column(db.Boolean, default=False)
     expvalue = (db.Integer)
-    ask_times = db.Column(db.Integer, default=5)
     wxopenid = db.Column(db.String(32), unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     asks = db.relationship('Ask', backref='student', lazy='dynamic')
     feedbacks = db.relationship('Feedback', backref='student', lazy='dynamic')
     schools = db.relationship(
-        'School',
-        secondary=customers,
-        backref=db.backref('students', lazy='dynamic'),
-        lazy='dynamic'
+        'SchoolStudent',
+        backref=db.backref('school', lazy='joined'),
+        lazy='dynamic',
+        cascade='all, delete-orphan'
     )
+
+    @property
+    def password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    # 验证密码哈希串
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    # 生成token
+    def generate_auth_token(self, expiration=600):
+        s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'id': self.id}).decode('utf-8')
+
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        student_user = Student.query.get(data['id'])
+        return student_user
 
 
 class Course(db.Model):

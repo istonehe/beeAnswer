@@ -24,4 +24,7 @@ def create_app(config_name):
     from .student_api import student_api_bp as student_api_blueprint
     app.register_blueprint(student_api_blueprint, url_prefix='/v1/student')
 
+    from .public_api import public_api_bp as public_api_blueprint
+    app.register_blueprint(public_api_blueprint, url_prefix='/v1/public')
+
     return app

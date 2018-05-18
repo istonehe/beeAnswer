@@ -2,10 +2,9 @@ import re
 from flask import url_for
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from webargs import fields, ValidationError
-from sqlalchemy import func
 from webargs.flaskparser import use_args
 from sqlalchemy.exc import IntegrityError
-from ..models import School, Tcode, Teacher, Course
+from ..models import School, Tcode, Teacher, Course, Student, SchoolStudent
 from .. import db
 from . import admin_api
 
@@ -58,6 +57,31 @@ teacher_search = {
 dismiss_teacher = {
     'school_id': fields.Int(required=True),
     'teacher_id': fields.Int(required=True)
+}
+
+student_list = {
+    'school_id': fields.Int(missing=0),
+    'page': fields.Int(missing=1),
+    'per_page': fields.Int(missing=10)
+}
+
+student_args = {
+    'nickname': fields.Str(missing=' '),
+    'rename': fields.Str(missing=' '),
+    'intro': fields.Str(missing=' '),
+    'disabled': fields.Bool(missing=False),
+    'password': fields.Str(required=True, validate=lambda p: len(p) >= 6),
+    'telephone': fields.Int(
+        required=True,
+        validate=lambda p: re.match('^1[34578]\\d{9}$', str(p)) is not None
+    )
+}
+
+student_search = {
+    'telephone': fields.Str(
+        required=True,
+        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+    )
 }
 
 # marshal_with
@@ -123,10 +147,64 @@ teacher_created = {
     'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
 }
 
+student_paging_list = {
+    'students': rfields.Nested({
+        'id': rfields.Integer,
+        'nickname': rfields.String,
+        'rename': rfields.String,
+        'telephone': rfields.Integer,
+        'imgurl': rfields.String,
+        'fromwhere': rfields.String,
+        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'disabled': rfields.Boolean,
+        'expevalue': rfields.Integer
+    }),
+    'prev': rfields.String,
+    'next': rfields.String,
+    'count': rfields.Integer
+}
+
+scstudent_info = {
+    'id': rfields.Integer,
+    'nickname': rfields.String,
+    'rename': rfields.String,
+    'telephone': rfields.Integer,
+    'imgurl': rfields.String,
+    'fromwhere': rfields.String,
+    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'disabled': rfields.Boolean,
+    'expevalue': rfields.Integer,
+    'vip_times': rfields.Integer,
+    'nomal_times': rfields.Integer,
+    'vip_expire': rfields.DateTime(dt_format='rfc822'),
+    'join_timestamp': rfields.DateTime(dt_format='rfc822')
+}
+
+student_info = {
+    'id': rfields.Integer,
+    'nickname': rfields.String,
+    'rename': rfields.String,
+    'telephone': rfields.Integer,
+    'imgurl': rfields.String,
+    'fromwhere': rfields.String,
+    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'disabled': rfields.Boolean
+}
+
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
         abort(404, message='学校不存在')
+
+
+def abort_if_teacher_doesnt_exist(id):
+    if Teacher.query.get(id) is None:
+        abort(404, message='教师不存在')
+
+
+def abort_if_student_doesnt_exist(id):
+    if Student.query.get(id) is None:
+        abort(404, message='学生不存在')
 
 
 class SchoolList(Resource):
@@ -246,7 +324,7 @@ class TeacherList(Resource):
                 per_page=per_page,
                 error_out=True
             )
-        
+
         teachers = pagination.items
         prev = None
         if pagination.has_prev:
@@ -261,11 +339,6 @@ class TeacherList(Resource):
             'count': pagination.total
         }
         return result, 200
-
-
-def abort_if_teacher_doesnt_exist(id):
-    if Teacher.query.get(id) is None:
-        abort(404, message='教师不存在')
 
 
 class Teacherx(Resource):
@@ -305,7 +378,7 @@ class TeacherSearch(Resource):
     def get(self, args):
         teacher = Teacher.query.filter_by(telephone=args['telephone']).first()
         if teacher is None:
-            abort(404, message='教师不存在', code=1001)
+            abort(404, message='教师不存在')
         return teacher, 200
 
 
@@ -321,6 +394,94 @@ class DismissTeacher(Resource):
         return '', 204
 
 
+class StudentList(Resource):
+    @marshal_with(student_paging_list, envelope='resource')
+    @use_args(student_list)
+    def get(self, args):
+        s_id = args['school_id']
+        page = args['page']
+        per_page = args['per_page']
+        if s_id == 0:
+            pagination = Student.query.paginate(
+                page=page, per_page=per_page, error_out=True
+            )
+        else:
+            abort_if_scholl_doesnt_exist(s_id)
+            school = School.query.get(s_id)
+            pagination = school.students.paginate(
+                page=page, per_page=per_page, error_out=True
+            )
+        students = pagination.items
+        prev = None
+        if pagination.has_prev:
+            prev = url_for('admin_api.studentlist', s_id=s_id, page=page-1, per_page=per_page, _external=True)
+        next = None
+        if pagination.has_next:
+            next = url_for('admin_api.studentlist', s_id=s_id, page=page+1, per_page=per_page, _external=True)
+        result = {
+            'students': students,
+            'prev': prev,
+            'next': next,
+            'count': pagination.total,
+            'school_id': s_id
+        }
+        return result, 200
+
+
+# 某学校的学生
+class ScStudent(Resource):
+    @marshal_with(scstudent_info, envelope='resource')
+    def get(self, school_id, student_id):
+        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_student_doesnt_exist(student_id)
+        student = Student.query.get(student_id)
+        if student.is_school_joined(school_id) is False:
+            abort(404, message='该学校没有此学生')
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).first()
+        student.vip_times = member_info.vip_times
+        student.nomal_times = member_info.nomal_times
+        student.vip_expire = member_info.vip_expire
+        student.join_timestamp = member_info.timestamp
+        return student, 200
+
+
+class Studentx(Resource):
+    @marshal_with(student_info, envelope='resource')
+    def get(self, id):
+        student = Student.query.get(id)
+        if student is None:
+            abort(404, message='没有这个学生')
+        return student, 200
+
+    @marshal_with(student_info, envelope='resource')
+    @use_args(student_args)
+    def put(self, args, id):
+        student = Student.query.get(id)
+        if student is None:
+            abort(404, message='没有这个学生')
+        student.telephone = args['telephone']
+        student.nickname = args['nickname']
+        student.rename = args['rename']
+        student.disabled = args['disabled']
+        student.password = args['password']
+        db.session.add(student)
+        db.session.commit()
+        return student, 201
+
+
+class StudentSearch(Resource):
+    @marshal_with(student_info, envelope='resource')
+    @use_args(student_search)
+    def get(self, args):
+        student = Student.query.filter_by(telephone=args['telephone']).first()
+        if student is None:
+            abort(404, message='学生不存在')
+        return student, 200
+
+
 admin_api.add_resource(SchoolList, '/schools', endpoint='schools')
 admin_api.add_resource(Schoolx, '/school/<int:id>', endpoint='school')
 admin_api.add_resource(SchoolSearch, '/schools/search')
@@ -329,3 +490,8 @@ admin_api.add_resource(TeacherList, '/teachers', endpoint='teachers')
 admin_api.add_resource(Teacherx, '/teacher/<int:id>', endpoint='teacher')
 admin_api.add_resource(TeacherSearch, '/teachers/search')
 admin_api.add_resource(DismissTeacher, '/dismiss')
+
+admin_api.add_resource(StudentList, '/students', endpoint='studentlist')
+admin_api.add_resource(ScStudent, '/<school_id>/student/<student_id>', endpoint='scstudent')
+admin_api.add_resource(Studentx, '/student/<id>', endpoint='student')
+admin_api.add_resource(StudentSearch, '/student/search')

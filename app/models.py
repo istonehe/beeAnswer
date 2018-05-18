@@ -275,10 +275,16 @@ class Student(db.Model):
 
     def join_school(self, school_id):
         school = School.query.get(school_id)
+        # 将课程属性取出附给每个学校对应的学生
         course = school.courses.first()
         vip_times = course.vip_times
         nomal_times = course.nomal_times
-        s_and_s = SchoolStudent(student=self, school=school, vip_times=vip_times, nomal_times=nomal_times)
+        s_and_s = SchoolStudent(
+            student=self,
+            school=school,
+            vip_times=vip_times,
+            nomal_times=nomal_times
+        )
         db.session.add(s_and_s)
         db.session.commit()
 

@@ -6,7 +6,7 @@ from webargs import fields
 from webargs.flaskparser import use_args
 from ..models import Student
 from .. import db
-from . import student_api, student_api_bp
+from . import student_api
 
 auth = HTTPBasicAuth()
 

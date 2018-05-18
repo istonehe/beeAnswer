@@ -99,6 +99,41 @@ gender
     http --json --auth user:password DELETE /v1/admin/dismiss teacher_id=<id> school_id=<id>
 
 
+### 学生列表
+v1/admin/students  get  
+school_id  不填默认列出所有学生 
+pape  
+per_page  
+
+    http --json --auth user:password GET :5000/v1/admin/students school_id=2  pape=1 per_page=2
+
+
+### 某学校学生详情
+v1/admin/<int:school_id>/student/<int:student_id>  get  
+
+    http --json --auth user:password GET :5000/v1/admin/1/student/2
+
+
+### 学生详情
+v1/admin/student/<int:id>  get  
+
+    http --json --auth user:password GET :5000/v1/admin/student/2
+
+
+### 修改学生资料
+v1/admin/student/<int:id>  put  
+
+    http --json --auth user:password PUT :5000/v1/admin/student/2 telephone=15900000002 nickname=Noah rename=realname password=123456
+
+
+### 搜索学生
+/v1/admin/student/search GET 
+telephone
+
+    http --json --auth user:password GET :5000/v1/admin/student/search telephone=15900000001
+
+
+
 
 教学机构方
 ------
@@ -170,10 +205,18 @@ school_id
 ### 查看学生列表
 v1/<int:school_id>/students
 school_id  
-page   第几页  （默认1）  
-per_page   每页多少条  （默认20）  
+page   第几页  （默认1） 
+per_page   每页多少条  （默认20）   
 
     http --json --auth teacher:password GET :5000/v1/school/1/students
+
+
+
+### 查看学生详情
+v1/<int:school_id>/student/<int:student_id>  
+
+    http --json --auth teacher:password GET :5000/v1/school/1/student/1
+
 
 
 学生方

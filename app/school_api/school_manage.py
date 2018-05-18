@@ -3,7 +3,7 @@ from flask_restful import Resource, marshal_with, abort, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
 from webargs.flaskparser import use_args
-from ..models import Teacher, School
+from ..models import Teacher, School, Student, SchoolStudent
 from .. import db
 from . import school_api
 
@@ -105,6 +105,22 @@ student_paging_list = {
     'count': rfields.Integer
 }
 
+student_info = {
+    'id': rfields.Integer,
+    'nickname': rfields.String,
+    'rename': rfields.String,
+    'telephone': rfields.Integer,
+    'imgurl': rfields.String,
+    'fromwhere': rfields.String,
+    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'disabled': rfields.Boolean,
+    'expevalue': rfields.Integer,
+    'vip_times': rfields.Integer,
+    'nomal_times': rfields.Integer,
+    'vip_expire': rfields.DateTime(dt_format='rfc822'),
+    'join_timestamp': rfields.DateTime(dt_format='rfc822')
+}
+
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
@@ -114,7 +130,8 @@ def abort_if_scholl_doesnt_exist(id):
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
         abort(404, message='教师不存在')
-    
+
+
 def abort_if_student_doesnt_exist(id):
     if Student.query.get(id) is None:
         abort(404, message='学生不存在')
@@ -249,11 +266,22 @@ class Studentx(Resource):
     @auth.login_required
     @marshal_with(student_info, envelope='resource')
     def get(self, school_id, student_id):
+        if g.teacher_user.is_employ(school_id) is False:
+            abort(401, message='你不是这里的老师')
         abort_if_scholl_doesnt_exist(school_id)
         abort_if_student_doesnt_exist(student_id)
-        school = School.query.get(school_id)
         student = Student.query.get(student_id)
-        
+        if student.is_school_joined is False:
+            abort(401, message='该学校没有此学生')
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).first()
+        student.vip_times = member_info.vip_times
+        student.nomal_times = member_info.nomal_times
+        student.vip_expire = member_info.vip_expire
+        student.join_timestamp = member_info.timestamp
+        return student, 200
 
 
 school_api.add_resource(Coursex, '/course', endpoint='course')
@@ -264,3 +292,4 @@ school_api.add_resource(DismissTeacher, '/dismiss')
 school_api.add_resource(TeacherDismiss, '/teacher/dismiss')
 
 school_api.add_resource(StudentList, '/<s_id>/students', endpoint='studentlist')
+school_api.add_resource(Studentx, '/<school_id>/student/<student_id>', endpoint='student')

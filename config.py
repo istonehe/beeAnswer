@@ -7,7 +7,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'this is a string'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_AS_ASCII = False
-    RESTFUL_JSON=dict(ensure_ascii=False)
+    RESTFUL_JSON = dict(ensure_ascii=False)
 
     @staticmethod
     def init_app(app):

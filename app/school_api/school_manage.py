@@ -1,4 +1,4 @@
-from flask import g
+from flask import g, url_for
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
@@ -43,6 +43,11 @@ teacher_dismiss = {
     'school_id': fields.Int(required=True)
 }
 
+student_list = {
+    'page': fields.Int(missing=1),
+    'per_page': fields.Int(missing=10)
+}
+
 
 # marshal_with
 course_info = {
@@ -83,6 +88,23 @@ teacher_info = {
     'answercount': rfields.Integer
 }
 
+student_paging_list = {
+    'students': rfields.Nested({
+        'id': rfields.Integer,
+        'nickname': rfields.String,
+        'rename': rfields.String,
+        'telephone': rfields.Integer,
+        'imgurl': rfields.String,
+        'fromwhere': rfields.String,
+        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'disabled': rfields.Boolean,
+        'expevalue': rfields.Integer
+    }),
+    'prev': rfields.String,
+    'next': rfields.String,
+    'count': rfields.Integer
+}
+
 
 def abort_if_scholl_doesnt_exist(id):
     if School.query.get(id) is None:
@@ -92,6 +114,10 @@ def abort_if_scholl_doesnt_exist(id):
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
         abort(404, message='教师不存在')
+    
+def abort_if_student_doesnt_exist(id):
+    if Student.query.get(id) is None:
+        abort(404, message='学生不存在')
 
 
 class Coursex(Resource):
@@ -189,9 +215,52 @@ class TeacherDismiss(Resource):
         return '', 204
 
 
+class StudentList(Resource):
+    @auth.login_required
+    @marshal_with(student_paging_list, envelope='resource')
+    @use_args(student_list)
+    def get(self, args, s_id):
+        abort_if_scholl_doesnt_exist(s_id)
+        page = args['page']
+        per_page = args['per_page']
+        if g.teacher_user.is_employ(s_id) is False:
+            abort(401, message='你不是这里的老师')
+        school = School.query.get(s_id)
+        pagination = school.students.paginate(
+            page=page, per_page=per_page, error_out=True
+        )
+        students = pagination.items
+        prev = None
+        if pagination.has_prev:
+            prev = url_for('school_api.studentlist', s_id=s_id, page=page-1, per_page=per_page, _external=True)
+        next = None
+        if pagination.has_next:
+            next = url_for('school_api.studentlist', s_id=s_id, page=page+1, per_page=per_page, _external=True)
+        result = {
+            'students': students,
+            'prev': prev,
+            'next': next,
+            'count': pagination.total
+        }
+        return result, 200
+
+
+class Studentx(Resource):
+    @auth.login_required
+    @marshal_with(student_info, envelope='resource')
+    def get(self, school_id, student_id):
+        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_student_doesnt_exist(student_id)
+        school = School.query.get(school_id)
+        student = Student.query.get(student_id)
+        
+
+
 school_api.add_resource(Coursex, '/course', endpoint='course')
 
 school_api.add_resource(SchoolDetail, '/<s_id>', endpoint='school')
 school_api.add_resource(TeacherDetail, '/<s_id>/teacher/<t_id>', endpoint='teacher')
 school_api.add_resource(DismissTeacher, '/dismiss')
 school_api.add_resource(TeacherDismiss, '/teacher/dismiss')
+
+school_api.add_resource(StudentList, '/<s_id>/students', endpoint='studentlist')

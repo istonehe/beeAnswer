@@ -3,7 +3,9 @@
 ******
 
 ### 获取token
-curl -u user:password -i -X GET /v1/admin/token
+curl -u user:password -i -X GET /v1/admin/token  
+
+    http --json --auth user:password GET :5000/v1/admin/token
 
 ### 创建学校
 v1/admin/school   post    
@@ -13,7 +15,7 @@ admin_phone
 
     curl -u user:password -i -X POST -H "Content-Type: application/json" -d '{"name":"教学机构名称","intro":"这是一个教学机构","admin_phone":"13720331113"}' /v1/admin/schools
 
-    http --json --auth user:password POST /v1/admin/schools name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
+    http --json --auth user:password POST :5000/v1/admin/schools name=教学机构名称 intro=教学机构介绍 admin_phone=13700001234
 
 ### 查询学校列表
 v1/admin/school   get  
@@ -54,12 +56,12 @@ v1/admin/school/id   delete
 
 
 ### 查询教师列表
-v1/admin/teacher   get  
+v1/admin/teachers   get  
 school_id (可选)  
 page   第几页  （默认1）  
 per_page   每页多少条  （默认20）
 
-    curl -u user:password -i -X GET -H "Content-Type: application/json" /v1/admin/teacher\?school_id\=9\&page\=1\&per_page\=3
+    http --json --auth user:password GET :5000/v1/admin/teachers school_id=1 page=1 per_page=2
 
 
 ### 查询教师
@@ -107,14 +109,17 @@ v1/teacher/register
 telephone  
 nickname  
 tcode  
+password  
 
     curl -i -X POST -H "Content-Type: application/json" -d '{"telephone":"13712341234","nickname":"教师昵称","tcode":"7IBfG1dd","password":"123456"}' /v1/school/register
 
-    http --json POST 127.0.0.1:5000/v1/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
+    http --json POST :5000/v1/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
 
 
 ### token获取
-curl -u user:password -i -X GET /v1/teacher/token
+/v1/school/token  
+
+    http --json --auth user:password GET :5000/v1/school/token
 
 
 ### 教师加入学校
@@ -161,5 +166,31 @@ school_id
 
     http --json --auth teacher:password DELETE :5000/v1/school/teacher/dismiss school_id=1
 
+
+### 查看学生列表
+v1/<int:school_id>/students
+school_id  
+page   第几页  （默认1）  
+per_page   每页多少条  （默认20）  
+
+    http --json --auth teacher:password GET :5000/v1/school/1/students
+
+
+学生方
+------
+
+### 学生注册
+v1/student/register  
+telephone  
+nickname  
+password  
+
+    http --json POST :5000/v1/student/register telephone=15900000001 nickname=huadou password=123456
+
+
+### 获取token
+v1/student/token
+
+    http --json --auth user:password Get :5000/v1/student/token
 
 

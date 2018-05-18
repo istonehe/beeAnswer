@@ -23,6 +23,7 @@ def verify_password(username_or_token, password):
 
 
 class GetToken(Resource):
+    @auth.login_required
     def get(self):
         token = g.teacher_user.generate_auth_token(600)
         return {'token': token, 'expiration': 600}

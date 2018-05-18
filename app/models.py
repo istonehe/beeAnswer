@@ -230,11 +230,11 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(128))
     rename = db.Column(db.String(128))
-    telephone = (db.Integer)
+    telephone = db.Column(db.Integer, unique=True)
     password_hash = db.Column(db.String(128))
     imgurl = db.Column(db.String(256))
     fromwhere = db.Column(db.String(128))
-    expvalue = (db.Integer)
+    expevalue = db.Column(db.Integer)
     wxopenid = db.Column(db.String(32), unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
@@ -272,6 +272,21 @@ class Student(db.Model):
             return False
         student_user = Student.query.get(data['id'])
         return student_user
+
+    def join_school(self, school_id):
+        school = School.query.get(school_id)
+        course = school.courses.first()
+        vip_times = course.vip_times
+        nomal_times = course.nomal_times
+        s_and_s = SchoolStudent(student=self, school=school, vip_times=vip_times, nomal_times=nomal_times)
+        db.session.add(s_and_s)
+        db.session.commit()
+
+    def is_school_joined(self, school_id):
+        school = School.query.get(school_id)
+        if school is None:
+            return False
+        return school.students.filter_by(id=self.id).first() is not None
 
 
 class Course(db.Model):

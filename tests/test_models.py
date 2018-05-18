@@ -1,7 +1,7 @@
 import unittest
 import time
 from app import create_app, db
-from app.models import Admin, School, Teacher, Tcode, Student
+from app.models import Admin, School, Teacher, Tcode, Student, Course
 
 
 class ModelTestCase(unittest.TestCase):
@@ -191,4 +191,13 @@ class ModelTestCase(unittest.TestCase):
         time.sleep(2)
         self.assertFalse(u.verify_auth_token(token) == u)
 
-
+    def test_student_join_school(self):
+        sc = School(name='aschool')
+        st = Student(nickname='astudent')
+        db.session.add_all([sc, st])
+        db.session.commit()
+        co = Course(course_name='acourse', school_id=sc.id)
+        db.session.add(co)
+        db.session.commit()
+        st.join_school(sc.id)
+        self.assertTrue(st.is_school_joined(sc.id))

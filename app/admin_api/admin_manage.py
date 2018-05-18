@@ -99,7 +99,7 @@ teacher_paging_list = {
         'gender': rfields.String,
         'wxopenid': rfields.String,
         'timestamp': rfields.DateTime(dt_format='rfc822'),
-        'url': rfields.Url(absolute=True, endpoint='admin_api.school')
+        'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
     }),
     'prev': rfields.String,
     'next': rfields.String,
@@ -231,27 +231,29 @@ class TeacherList(Resource):
     @use_args(teacher_list_args)
     def get(self, args):
         s_id = args['school_id']
+        page = args['page']
+        per_page = args['per_page']
         abort_if_scholl_doesnt_exist(s_id)
         if s_id == 0:
             pagination = Teacher.query.paginate(
-                page=s_id,
-                per_page=s_id,
+                page=page,
+                per_page=per_page,
                 error_out=True
             )
         else:
             pagination = School.query.get(s_id).teachers.paginate(
-                page=s_id,
-                per_page=s_id,
+                page=page,
+                per_page=per_page,
                 error_out=True
             )
         
         teachers = pagination.items
         prev = None
         if pagination.has_prev:
-            prev = url_for('admin_api.teachers', id=s_id-1, _external=True)
+            prev = url_for('admin_api.teachers', s_id=s_id, page=page-1, per_page=per_page, _external=True)
         next = None
         if pagination.has_next:
-            next = url_for('admin_api.teachers', id=s_id+1, _external=True)
+            next = url_for('admin_api.teachers', s_id=s_id, page=page+1, per_page=per_page, _external=True)
         result = {
             'teachers': teachers,
             'prev': prev,

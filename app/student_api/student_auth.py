@@ -32,7 +32,7 @@ student_info = {
     'wxopenid': rfields.String,
     'timestamp': rfields.DateTime(dt_format='rfc822'),
     'disabled': rfields.Boolean,
-    'expvalue': rfields.Integer
+    'expevalue': rfields.Integer
 }
 
 
@@ -57,12 +57,14 @@ class StudentReg(Resource):
             password=args['password']
         )
         db.session.add(student)
+        db.session.commit()
         return student, 201
 
 
 class GetToken(Resource):
+    @auth.login_required
     def get(self):
-        token = g.teacher_user.generate_auth_token(600)
+        token = g.student_user.generate_auth_token(600)
         return {'token': token, 'expiration': 600}
 
 

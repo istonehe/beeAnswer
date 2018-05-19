@@ -30,7 +30,7 @@ student_info = {
     'telephone': rfields.Integer,
     'fromwhere': rfields.String,
     'wxopenid': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'disabled': rfields.Boolean,
     'expevalue': rfields.Integer
 }

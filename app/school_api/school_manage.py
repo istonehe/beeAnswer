@@ -48,6 +48,12 @@ student_list = {
     'per_page': fields.Int(missing=10)
 }
 
+student_update = {
+    'vip_times': fields.Int(missing=-1, validate=lambda x: x >= -1),
+    'nomal_times': fields.Int(missing=-1, validate=lambda x: x >= 0),
+    'vip_expire': fields.DateTime()
+}
+
 
 # marshal_with
 course_info = {
@@ -96,7 +102,7 @@ student_paging_list = {
         'telephone': rfields.Integer,
         'imgurl': rfields.String,
         'fromwhere': rfields.String,
-        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
         'disabled': rfields.Boolean,
         'expevalue': rfields.Integer
     }),
@@ -112,13 +118,13 @@ student_info = {
     'telephone': rfields.Integer,
     'imgurl': rfields.String,
     'fromwhere': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'disabled': rfields.Boolean,
     'expevalue': rfields.Integer,
     'vip_times': rfields.Integer,
     'nomal_times': rfields.Integer,
-    'vip_expire': rfields.DateTime(dt_format='rfc822'),
-    'join_timestamp': rfields.DateTime(dt_format='rfc822')
+    'vip_expire': rfields.DateTime(dt_format='iso8601'),
+    'join_timestamp': rfields.DateTime(dt_format='iso8601')
 }
 
 
@@ -282,6 +288,31 @@ class Studentx(Resource):
         student.vip_expire = member_info.vip_expire
         student.join_timestamp = member_info.timestamp
         return student, 200
+
+    @auth.login_required
+    @marshal_with(student_update, envelope='resource')
+    def put(self, args, school_id, student_id):
+        if g.teacher_user.is_employ(school_id) is False:
+            abort(401, message='你不是这里的老师')
+        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_student_doesnt_exist(student_id)
+        student = Student.query.get(student_id)
+        if student.is_school_joined is False:
+            abort(401, message='该学校没有此学生')
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).first()
+        member_info.vip_times = args['vip_times']
+        member_info.nomal_times = args['nomal_times']
+        member_info.vip_expire = args['vip_expire']
+        db.session.add(member_info)
+        db.session.commit()
+        student.vip_times = member_info.vip_times
+        student.nomal_times = member_info.nomal_times
+        student.vip_expire = member_info.vip_expire
+        student.join_timestamp = member_info.timestamp
+        return student, 201
 
 
 school_api.add_resource(Coursex, '/course', endpoint='course')

@@ -91,7 +91,7 @@ school_paging_list = {
         'name': rfields.String,
         'intro': rfields.String,
         'admin': rfields.String,
-        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
         'url': rfields.Url(absolute=True, endpoint='admin_api.school')
     }),
     'prev': rfields.String,
@@ -104,7 +104,7 @@ school_created = {
     'name': rfields.String,
     'intro': rfields.String,
     'admin': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'url': rfields.Url(absolute=True, endpoint='admin_api.school')
 }
 
@@ -122,7 +122,7 @@ teacher_paging_list = {
         'telephone': rfields.String,
         'gender': rfields.String,
         'wxopenid': rfields.String,
-        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
         'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
     }),
     'prev': rfields.String,
@@ -143,7 +143,7 @@ teacher_created = {
         'name': rfields.String,
         'url': rfields.Url(absolute=True, endpoint='admin_api.school')
     }),
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'url': rfields.Url(absolute=True, endpoint='admin_api.teacher')
 }
 
@@ -155,7 +155,7 @@ student_paging_list = {
         'telephone': rfields.Integer,
         'imgurl': rfields.String,
         'fromwhere': rfields.String,
-        'timestamp': rfields.DateTime(dt_format='rfc822'),
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
         'disabled': rfields.Boolean,
         'expevalue': rfields.Integer
     }),
@@ -171,13 +171,13 @@ scstudent_info = {
     'telephone': rfields.Integer,
     'imgurl': rfields.String,
     'fromwhere': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'disabled': rfields.Boolean,
     'expevalue': rfields.Integer,
     'vip_times': rfields.Integer,
     'nomal_times': rfields.Integer,
-    'vip_expire': rfields.DateTime(dt_format='rfc822'),
-    'join_timestamp': rfields.DateTime(dt_format='rfc822')
+    'vip_expire': rfields.DateTime(dt_format='iso8601'),
+    'join_timestamp': rfields.DateTime(dt_format='iso8601')
 }
 
 student_info = {
@@ -187,7 +187,7 @@ student_info = {
     'telephone': rfields.Integer,
     'imgurl': rfields.String,
     'fromwhere': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='rfc822'),
+    'timestamp': rfields.DateTime(dt_format='iso8601'),
     'disabled': rfields.Boolean
 }
 

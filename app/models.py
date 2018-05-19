@@ -8,11 +8,6 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from . import db
 
 
-class Permission:
-    CORRECT = 1
-    ADMIN = 16
-
-
 class Admin(db.Model):
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key=True)

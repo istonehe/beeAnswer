@@ -140,15 +140,13 @@ telephone
 ******
 
 ### 教师注册
-v1/teacher/register  
+v1/public/teacher/register  
 telephone  
 nickname  
 tcode  
 password  
 
-    curl -i -X POST -H "Content-Type: application/json" -d '{"telephone":"13712341234","nickname":"教师昵称","tcode":"7IBfG1dd","password":"123456"}' /v1/school/register
-
-    http --json POST :5000/v1/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
+    http --json POST :5000/v1/public/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
 
 
 ### token获取
@@ -233,12 +231,12 @@ vip_expire
 ------
 
 ### 学生注册
-v1/student/register  
+v1/public/student/register  
 telephone  
 nickname  
 password  
 
-    http --json POST :5000/v1/student/register telephone=15900000001 nickname=huadou password=123456
+    http --json POST :5000/v1/public/student/register telephone=15900000001 nickname=huadou password=123456
 
 
 ### 获取token

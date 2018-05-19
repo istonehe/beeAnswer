@@ -1,25 +1,11 @@
 from flask import g, url_for
 from datetime import datetime
 from flask_restful import Resource, marshal_with, abort, fields as rfields
-from flask_httpauth import HTTPBasicAuth
 from webargs import fields
 from webargs.flaskparser import use_args
 from ..models import Teacher, School, Student, SchoolStudent
 from .. import db
 from . import school_api
-
-auth = HTTPBasicAuth()
-
-
-@auth.verify_password
-def verify_password(username_or_token, password):
-    teacher_user = Teacher.verify_auth_token(username_or_token)
-    if not teacher_user:
-        teacher_user = Teacher.query.filter_by(telephone=username_or_token).first()
-        if not teacher_user or not teacher_user.verify_password(password):
-            return False
-    g.teacher_user = teacher_user
-    return True
 
 
 # use_args
@@ -145,7 +131,6 @@ def abort_if_student_doesnt_exist(id):
 
 
 class Coursex(Resource):
-    @auth.login_required
     @marshal_with(course_info, envelope='resource')
     @use_args(course_set)
     def put(self, args):
@@ -166,7 +151,6 @@ class Coursex(Resource):
         db.session.commit()
         return course, 201
 
-    @auth.login_required
     @marshal_with(course_info, envelope='resource')
     @use_args(course_get)
     def get(self, args):
@@ -179,7 +163,6 @@ class Coursex(Resource):
 
 
 class SchoolDetail(Resource):
-    @auth.login_required
     @marshal_with(school_info, envelope='resource')
     def get(self, s_id):
         abort_if_scholl_doesnt_exist(s_id)
@@ -193,7 +176,6 @@ class SchoolDetail(Resource):
 
 
 class TeacherDetail(Resource):
-    @auth.login_required
     @marshal_with(teacher_info, envelope='resource')
     def get(self, s_id, t_id):
         abort_if_teacher_doesnt_exist(t_id)
@@ -208,7 +190,6 @@ class TeacherDetail(Resource):
 
 
 class DismissTeacher(Resource):
-    @auth.login_required
     @use_args(dismiss_teacher)
     def delete(self, args):
         s_id = args['school_id']
@@ -228,7 +209,6 @@ class DismissTeacher(Resource):
 
 
 class TeacherDismiss(Resource):
-    @auth.login_required
     @use_args(teacher_dismiss)
     def delete(self, args):
         s_id = args['school_id']
@@ -240,7 +220,6 @@ class TeacherDismiss(Resource):
 
 
 class StudentList(Resource):
-    @auth.login_required
     @marshal_with(student_paging_list, envelope='resource')
     @use_args(student_list)
     def get(self, args, s_id):
@@ -270,7 +249,6 @@ class StudentList(Resource):
 
 
 class Studentx(Resource):
-    @auth.login_required
     @marshal_with(student_info, envelope='resource')
     def get(self, school_id, student_id):
         if g.teacher_user.is_employ(school_id) is False:
@@ -290,7 +268,6 @@ class Studentx(Resource):
         student.join_timestamp = member_info.timestamp
         return student, 200
 
-    @auth.login_required
     @marshal_with(student_info, envelope='resource')
     @use_args(student_update)
     def put(self, args, school_id, student_id):

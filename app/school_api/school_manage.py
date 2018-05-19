@@ -1,4 +1,5 @@
 from flask import g, url_for
+from datetime import datetime
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from webargs import fields
@@ -50,8 +51,8 @@ student_list = {
 
 student_update = {
     'vip_times': fields.Int(missing=-1, validate=lambda x: x >= -1),
-    'nomal_times': fields.Int(missing=-1, validate=lambda x: x >= 0),
-    'vip_expire': fields.DateTime()
+    'nomal_times': fields.Int(missing=0, validate=lambda x: x >= 0),
+    'vip_expire': fields.DateTime(missing=datetime.utcnow().isoformat())
 }
 
 
@@ -290,7 +291,8 @@ class Studentx(Resource):
         return student, 200
 
     @auth.login_required
-    @marshal_with(student_update, envelope='resource')
+    @marshal_with(student_info, envelope='resource')
+    @use_args(student_update)
     def put(self, args, school_id, student_id):
         if g.teacher_user.is_employ(school_id) is False:
             abort(401, message='你不是这里的老师')

@@ -203,7 +203,7 @@ school_id
 
 
 ### 查看学生列表
-v1/<int:school_id>/students
+v1/<int:school_id>/students get  
 school_id  
 page   第几页  （默认1） 
 per_page   每页多少条  （默认20）   
@@ -213,9 +213,19 @@ per_page   每页多少条  （默认20）
 
 
 ### 查看学生详情
-v1/<int:school_id>/student/<int:student_id>  
+v1/<int:school_id>/student/<int:student_id>  get  
 
     http --json --auth teacher:password GET :5000/v1/school/1/student/1
+
+
+
+### 设置学生会员状态
+v1/<int:school_id>/student/<int:student_id>  put  
+vip_times  
+nomal_times  
+vip_expire  
+
+    http --json --auth teacher:password PUT :5000/v1/school/1/student/1 vip_times=50 nomal_times=5 vip_expire=2018-05-19T07:47:06.000Z
 
 
 

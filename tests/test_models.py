@@ -1,7 +1,8 @@
 import unittest
 import time
+from datetime import datetime, timedelta
 from app import create_app, db
-from app.models import Admin, School, Teacher, Tcode, Student, Course
+from app.models import Admin, School, Teacher, Tcode, Student, Course, SchoolStudent
 
 
 class ModelTestCase(unittest.TestCase):
@@ -201,3 +202,104 @@ class ModelTestCase(unittest.TestCase):
         db.session.commit()
         st.join_school(sc.id)
         self.assertTrue(st.is_school_joined(sc.id))
+
+    def test_student_can_ask(self):
+        sc01 = School(name='school01')
+        st01 = Student(nickname='student01')
+        sc02 = School(name='school02')
+        st02 = Student(nickname='student02')
+        sc03 = School(name='school03')
+        st03 = Student(nickname='student03')
+        sc04 = School(name='school04')
+        st04 = Student(nickname='student04')
+        sc05 = School(name='school05')
+        st05 = Student(nickname='student05')
+        db.session.add_all([sc01, st01, sc02, st02, sc03, st03, sc04, st04, sc05, st05])
+        db.session.commit()
+        # time True
+        co01 = Course(
+            course_name='acourse01',
+            school_id=sc01.id,
+            nomal_times=0,
+            vip_times=-1
+        )
+        # time False
+        co02 = Course(
+            course_name='acourse02',
+            school_id=sc02.id,
+            nomal_times=0,
+            vip_times=-1
+        )
+        co03 = Course(
+            course_name='acourse03',
+            school_id=sc03.id,
+            nomal_times=0,
+            vip_times=0
+        )
+        co04 = Course(
+            course_name='acourse04',
+            school_id=sc04.id,
+            nomal_times=0,
+            vip_times=1
+        )
+        co05 = Course(
+            course_name='acourse05',
+            school_id=sc05.id,
+            nomal_times=1,
+            vip_times=0
+        )
+        db.session.add_all([co01, co02, co03, co04, co05])
+        db.session.commit()
+        st01.join_school(sc01.id)
+        st02.join_school(sc02.id)
+        st03.join_school(sc03.id)
+        st04.join_school(sc04.id)
+        st05.join_school(sc05.id)
+        member_info01 = SchoolStudent.query.filter_by(
+            school_id=sc01.id,
+            student_id=st01.id
+        ).first()
+        member_info02 = SchoolStudent.query.filter_by(
+            school_id=sc02.id,
+            student_id=st02.id
+        ).first()
+        member_info03 = SchoolStudent.query.filter_by(
+            school_id=sc03.id,
+            student_id=st03.id
+        ).first()
+        member_info04 = SchoolStudent.query.filter_by(
+            school_id=sc04.id,
+            student_id=st04.id
+        ).first()
+        member_info05 = SchoolStudent.query.filter_by(
+            school_id=sc05.id,
+            student_id=st05.id
+        ).first()
+
+        member_info01.vip_expire = datetime.utcnow() + timedelta(days=1)
+        db.session.add(member_info01)
+        db.session.commit()
+        self.assertTrue(st01.can_ask(sc01.id))
+
+        member_info02.vip_expire = datetime.utcnow() - timedelta(days=1)
+        db.session.add(member_info02)
+        db.session.commit()
+        self.assertFalse(st02.can_ask(sc02.id))
+
+        member_info03.vip_expire = datetime.utcnow() + timedelta(days=1)
+        db.session.add(member_info03)
+        db.session.commit()
+        self.assertFalse(st03.can_ask(sc03.id))
+
+        member_info04.vip_expire = datetime.utcnow() + timedelta(days=1)
+        db.session.add(member_info04)
+        db.session.commit()
+        self.assertTrue(st04.can_ask(sc04.id))
+
+        member_info05.vip_expire = datetime.utcnow() - timedelta(days=1)
+        db.session.add(member_info05)
+        db.session.commit()
+        self.assertTrue(st05.can_ask(sc05.id))
+
+        self.assertFalse(st05.can_ask(sc04.id))
+        

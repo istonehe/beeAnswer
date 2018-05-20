@@ -289,6 +289,23 @@ class Student(db.Model):
             return False
         return school.students.filter_by(id=self.id).first() is not None
 
+    def can_ask(self, school_id):
+        school = School.query.get(school_id)
+        if school is None:
+            return False
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=self.id
+        ).first()
+        if member_info is None:
+            return False
+        if member_info.vip_expire > datetime.utcnow():
+            if member_info.vip_times == -1 or member_info.vip_times > 0:
+                return True
+        if member_info.nomal_times > 0:
+            return True
+        return False
+
 
 class Course(db.Model):
     __tablename__ = 'courses'

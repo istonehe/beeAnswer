@@ -336,7 +336,7 @@ class Answer(db.Model):
     ask_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
-    topicimages = db.relationship('Topicimage', backref='answer', lazy='dynamic')
+    topicimages = db.relationship('Topicimage', backref='answer', lazy='select')
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     ask_id = db.Column(db.Integer, db.ForeignKey('asks.id'))
@@ -347,7 +347,7 @@ class Topicimage(db.Model):
     __tablename__ = 'topicimages'
     id = db.Column(db.Integer, primary_key=True)
     img_url = db.Column(db.String(256))
-    img_title = db.Column(db.String(128))
+    auth_telephone = db.Column(db.Integer)
     img_sort = db.Column(db.Integer)
     ask_id = db.Column(db.Integer, db.ForeignKey('asks.id'))
     answer_id = db.Column(db.Integer, db.ForeignKey('answers.id'))

@@ -1,8 +1,12 @@
 from app import db
-from app.models import School, Teacher, Student, Course
+from app.models import Admin, School, Teacher, Student, Course
 
 
 def somedata():
+    admin01 = Admin(name='user', password='password')
+    db.session.add(admin01)
+    db.session.commit()
+
     school01 = School(name='这是学校01', admin=13700000001)
     school02 = School(name='这是学校02', admin=13700000004)
     school03 = School(name='这是学校03', admin=13700000007)

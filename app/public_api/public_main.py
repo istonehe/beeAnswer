@@ -1,18 +1,20 @@
 import os
 import re
+import hashlib
+import time
 from flask import g, request, current_app, url_for
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 from webargs import fields
 from webargs.flaskparser import use_args
-from ..models import Teacher, Student
+from ..models import Teacher, Student, Topicimage
 from .. import db
 from . import public_api
 
 auth = HTTPBasicAuth()
 
-basedir = os.path.dirname(os.path.realpath(__file__))
+basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir)
 
 # use_args
 teacher_reg = {
@@ -83,9 +85,22 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
 
+def md5Encode(str):
+    m = hashlib.md5()
+    m.update(str)
+    return m.hexdigest()
+
+
+def rename_file(filename):
+    leftname = filename.rsplit('.', 1)[0] + str(time.time())
+    md5leftname = md5Encode(leftname.encode('utf-8'))
+    exname = filename.rsplit('.', 1)[1]
+    return md5leftname + '.' + exname
+
+
 class UploadFile(Resource):
     @auth.login_required
-    @marshal_with(uploadfile_info, envelope='resource')
+    # @marshal_with(uploadfile_info, envelope='resource')
     def post(self):
         if 'file' not in request.files:
             abort(400, message='没有文件')
@@ -94,9 +109,19 @@ class UploadFile(Resource):
             abort(400, message='No selected file')
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+            md5filename = rename_file(filename)
+            upfolder = current_app.config['UPLOAD_FOLDER']
+            file.save(os.path.join(basedir, 'static', upfolder, md5filename))
+            topicimage = Topicimage(
+                img_url=url_for('static', filename=upfolder + '/' + md5filename),
+                auth_telephone=g.user.telephone
+            )
+            db.session.add(topicimage)
+            db.session.commit()
             result = {
-                'url': url_for('public_api.uploadfile', filename=filename, _external=True),
+                'id': topicimage.id,
+                'url': url_for('static', filename=upfolder + '/' + md5filename),
+                'auth_telephone': topicimage.auth_telephone
             }
             return result, 200
 

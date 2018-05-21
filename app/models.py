@@ -105,6 +105,11 @@ class School(db.Model):
         lazy='dynamic',
         cascade="all, delete, delete-orphan"
     )
+    asks = db.relationship(
+        'Ask',
+        backref='school',
+        lazy='dynamic'
+    )
     students = db.relationship(
         'Student',
         secondary="school_student",
@@ -324,9 +329,10 @@ class Ask(db.Model):
     ask_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
-    topicimages = db.relationship('Topicimage', backref='ask', lazy='dynamic')
-    answers = db.relationship('Answer', backref='ask', lazy='dynamic')
+    topicimages = db.relationship('Topicimage', backref='ask', lazy='select')
+    answers = db.relationship('Answer', backref='ask', lazy='select')
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
+    school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
 
 
 class Answer(db.Model):

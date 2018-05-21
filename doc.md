@@ -244,4 +244,15 @@ v1/student/token
 
     http --json --auth user:password Get :5000/v1/student/token
 
+### 提交问题
+v1/student/ask
 
+    http --json --auth 15900000001:123456 :5000/v1/student/ask school_id=1 ask_text=问题内容 img_ids=1,2,3
+
+Public
+------
+
+### 上传文件
+v1/public/uploads 
+
+    http -f --auth user:password :5000/v1/public/uploads file@bee.jpg

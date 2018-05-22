@@ -2,7 +2,7 @@ from flask import g
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from webargs import fields
 from webargs.flaskparser import use_args
-from ..models import Student, School, Teacher, Ask, Answer, Topicimage
+from ..models import Student, School, Teacher, Ask, Answer, Topicimage, SchoolStudent
 from .. import db
 from . import student_api
 
@@ -17,7 +17,7 @@ def abort_if_student_doesnt_exist(id):
         abort(404, message='学生不存在')
 
 
-class AskQuestion(Resource):
+class Questions(Resource):
     ask_args = {
         'school_id': fields.Int(required=True),
         'ask_text': fields.Str(required=True),
@@ -84,9 +84,21 @@ class AskQuestion(Resource):
             imgs.append(img)
         db.session.add_all(imgs)
         db.session.commit()
-        
+        member_info = SchoolStudent.query.filter_by(
+            school_id=s_id,
+            student_id=g.student_user.id
+        ).first()
+        if member_info.vip_times > 0:
+            member_info.vip_times -= 1
+        else:
+            member_info.nomal_times -= 1
+        db.session.add(member_info)
+        db.session.commit()
         return ask, 200
+
+    def get(self, args):
         
+
 
 class Testtt(Resource):
     test_args = {
@@ -98,6 +110,6 @@ class Testtt(Resource):
         return args['kaca']
 
 
-student_api.add_resource(AskQuestion, '/ask')
+student_api.add_resource(Questions, '/asks')
 
 student_api.add_resource(Testtt, '/test')

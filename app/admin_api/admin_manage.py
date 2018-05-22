@@ -192,7 +192,7 @@ student_info = {
 }
 
 
-def abort_if_scholl_doesnt_exist(id):
+def abort_if_school_doesnt_exist(id):
     if School.query.get(id) is None:
         abort(404, message='学校不存在')
 
@@ -252,12 +252,12 @@ class SchoolList(Resource):
 class Schoolx(Resource):
     @marshal_with(school_created, envelope='resource')
     def get(self, id):
-        abort_if_scholl_doesnt_exist(id)
+        abort_if_school_doesnt_exist(id)
         school = School.query.get(id)
         return school, 200
 
     def delete(self, id):
-        abort_if_scholl_doesnt_exist(id)
+        abort_if_school_doesnt_exist(id)
         school = School.query.get(id)
         db.session.delete(school)
         db.session.commit()
@@ -266,7 +266,7 @@ class Schoolx(Resource):
     @marshal_with(school_created, envelope='resource')
     @use_args(school_args)
     def put(self, args, id):
-        abort_if_scholl_doesnt_exist(id)
+        abort_if_school_doesnt_exist(id)
         school = School.query.get(id)
         school.name = args['name']
         school.intro = args['intro']
@@ -311,7 +311,7 @@ class TeacherList(Resource):
         s_id = args['school_id']
         page = args['page']
         per_page = args['per_page']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if s_id == 0:
             pagination = Teacher.query.paginate(
                 page=page,
@@ -387,7 +387,7 @@ class DismissTeacher(Resource):
     def delete(self, args):
         s_id = args['school_id']
         t_id = args['teacher_id']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         abort_if_teacher_doesnt_exist(t_id)
         teacher = Teacher.query.get(t_id)
         teacher.dismiss_school(s_id)
@@ -406,7 +406,7 @@ class StudentList(Resource):
                 page=page, per_page=per_page, error_out=True
             )
         else:
-            abort_if_scholl_doesnt_exist(s_id)
+            abort_if_school_doesnt_exist(s_id)
             school = School.query.get(s_id)
             pagination = school.students.paginate(
                 page=page, per_page=per_page, error_out=True
@@ -432,7 +432,7 @@ class StudentList(Resource):
 class ScStudent(Resource):
     @marshal_with(scstudent_info, envelope='resource')
     def get(self, school_id, student_id):
-        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_school_doesnt_exist(school_id)
         abort_if_student_doesnt_exist(student_id)
         student = Student.query.get(student_id)
         if student.is_school_joined(school_id) is False:

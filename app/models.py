@@ -329,6 +329,7 @@ class Ask(db.Model):
     ask_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
+    is_answer = db.Column(db.Boolean, default=False)
     topicimages = db.relationship('Topicimage', backref='ask', lazy='select')
     answers = db.relationship('Answer', backref='ask', lazy='select')
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))

@@ -115,7 +115,7 @@ student_info = {
 }
 
 
-def abort_if_scholl_doesnt_exist(id):
+def abort_if_school_doesnt_exist(id):
     if School.query.get(id) is None:
         abort(404, message='学校不存在')
 
@@ -139,7 +139,7 @@ class Coursex(Resource):
         c_intro = args['course_intro']
         n_times = args['nomal_times']
         v_times = args['vip_times']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if g.teacher_user.is_teacher_admin(s_id) is False:
             abort(401, message='没有学校管理员权限')
         course = School.query.get(9).courses.first()
@@ -155,7 +155,7 @@ class Coursex(Resource):
     @use_args(course_get)
     def get(self, args):
         s_id = args['school_id']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if g.teacher_user.is_employ(s_id) is False:
             abort(401, message='你不是这个学校的老师')
         course = School.query.get(9).courses.first()
@@ -165,7 +165,7 @@ class Coursex(Resource):
 class SchoolDetail(Resource):
     @marshal_with(school_info, envelope='resource')
     def get(self, s_id):
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if g.teacher_user.is_employ(s_id) is False:
             abort(401, message='不是这个学校的老师')
         school = School.query.get(s_id)
@@ -179,7 +179,7 @@ class TeacherDetail(Resource):
     @marshal_with(teacher_info, envelope='resource')
     def get(self, s_id, t_id):
         abort_if_teacher_doesnt_exist(t_id)
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if g.teacher_user.is_employ(s_id) is False:
             abort(401, message='你不是这个学校的老师')
         teacher = Teacher.query.get(t_id)
@@ -194,7 +194,7 @@ class DismissTeacher(Resource):
     def delete(self, args):
         s_id = args['school_id']
         t_id = args['teacher_id']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         abort_if_teacher_doesnt_exist(t_id)
         school = School.query.get(s_id)
         if g.teacher_user.is_teacher_admin(s_id) is False:
@@ -212,7 +212,7 @@ class TeacherDismiss(Resource):
     @use_args(teacher_dismiss)
     def delete(self, args):
         s_id = args['school_id']
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         if g.teacher_user.is_employ(s_id) is False:
             abort(401, message='你不是这里的老师')
         g.teacher_user.dismiss_school(s_id)
@@ -223,7 +223,7 @@ class StudentList(Resource):
     @marshal_with(student_paging_list, envelope='resource')
     @use_args(student_list)
     def get(self, args, s_id):
-        abort_if_scholl_doesnt_exist(s_id)
+        abort_if_school_doesnt_exist(s_id)
         page = args['page']
         per_page = args['per_page']
         if g.teacher_user.is_employ(s_id) is False:
@@ -235,10 +235,10 @@ class StudentList(Resource):
         students = pagination.items
         prev = None
         if pagination.has_prev:
-            prev = url_for('school_api.studentlist', s_id=s_id, page=page-1, per_page=per_page, _external=True)
+            prev = url_for('school_api.studentlist', s_id=s_id, page=page-1, per_page=per_page)
         next = None
         if pagination.has_next:
-            next = url_for('school_api.studentlist', s_id=s_id, page=page+1, per_page=per_page, _external=True)
+            next = url_for('school_api.studentlist', s_id=s_id, page=page+1, per_page=per_page)
         result = {
             'students': students,
             'prev': prev,
@@ -253,7 +253,7 @@ class Studentx(Resource):
     def get(self, school_id, student_id):
         if g.teacher_user.is_employ(school_id) is False:
             abort(401, message='你不是这里的老师')
-        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_school_doesnt_exist(school_id)
         abort_if_student_doesnt_exist(student_id)
         student = Student.query.get(student_id)
         if student.is_school_joined is False:
@@ -273,7 +273,7 @@ class Studentx(Resource):
     def put(self, args, school_id, student_id):
         if g.teacher_user.is_employ(school_id) is False:
             abort(401, message='你不是这里的老师')
-        abort_if_scholl_doesnt_exist(school_id)
+        abort_if_school_doesnt_exist(school_id)
         abort_if_student_doesnt_exist(student_id)
         student = Student.query.get(student_id)
         if student.is_school_joined is False:

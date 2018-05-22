@@ -244,10 +244,28 @@ v1/student/token
 
     http --json --auth user:password Get :5000/v1/student/token
 
+
 ### 提交问题
-v1/student/ask
+v1/student/ask  post  
+school_id  
+ask_text  
+img_ids  
 
     http --json --auth 15900000001:123456 :5000/v1/student/ask school_id=1 ask_text=问题内容 img_ids=1,2,3
+
+
+### 获取问题列表
+v1/student/asks  
+school_id  
+page  
+per_page  
+
+    http --json --auth 15900000001:123456 GET :5000/v1/student/asks school_id=1
+
+
+### 获取问题详情
+v1/student/ask/
+
 
 Public
 ------

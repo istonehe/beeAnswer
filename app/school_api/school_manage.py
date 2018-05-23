@@ -300,16 +300,12 @@ class Studentx(Resource):
 
 
 class Questions(Resource):
+
     ask_list_args = {
         'school_id': fields.Int(required=True),
         'student_id': fields.Int(missing='0'),
         'page': fields.Int(missing=1),
         'per_page': fields.Int(missing=10)
-    }
-
-    img_list = {
-        'id': rfields.Integer,
-        'img_url': rfields.String
     }
 
     answer_info = {
@@ -322,7 +318,7 @@ class Questions(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answer_rate': rfields.Integer
     }
 
@@ -334,9 +330,9 @@ class Questions(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'is_answer': rfields.Boolean
+        'be_answered': rfields.Boolean
     }
 
     ask_list_info = {
@@ -371,7 +367,6 @@ class Questions(Resource):
             ).paginate(
                 page=page, per_page=per_page, error_out=True
             )
-
         asks = pagination.items
         prev = None
         if pagination.has_prev:
@@ -379,6 +374,14 @@ class Questions(Resource):
         next = None
         if pagination.has_next:
             next = url_for('school_api.asks', sc_id=sc_id, st_id=st_id, page=page+1, per_page=per_page)
+        for ask in asks:
+            img_ids = ask.img_ids
+            img_list = img_ids.rsplit(',')
+            imgs = []
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                imgs.append(img.img_url)
+            ask.imgs = imgs
         result = {
             'asks': asks,
             'prev': prev,
@@ -389,10 +392,6 @@ class Questions(Resource):
 
 
 class Question(Resource):
-    img_list = {
-        'id': rfields.Integer,
-        'img_url': rfields.String
-    }
 
     answer_info = {
         'id': rfields.Integer,
@@ -404,7 +403,7 @@ class Question(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answer_rate': rfields.Integer
     }
 
@@ -416,9 +415,9 @@ class Question(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'is_answer': rfields.Boolean
+        'be_answered': rfields.Boolean
     }
 
     @marshal_with(ask_info)
@@ -427,47 +426,83 @@ class Question(Resource):
         ask = Ask.query.get(id)
         if g.teacher_user.is_employ(ask.school_id) is False:
             abort(401, message='你不是这里的老师')
+        img_ids = ask.img_ids
+        img_list = img_ids.rsplit(',')
+        imgs = []
+        for i in img_list:
+            img = Topicimage.query.get(i)
+            imgs.append(img.img_url)
+        ask.imgs = imgs
         return ask, 200
 
 
-class TeacherAnswer(Resource):
+class TeacherAnswers(Resource):
 
     answer_args = {
-        'ask_id': fields.Int(required=True),
         'answer_text': fields.Str(required=True),
         'voice_url': fields.Str(missing=None),
         'voice_duration': fields.Str(missing=None),
         'img_ids': fields.Str(missing=None)
     }
-  
+
+    answer_info = {
+        'id': rfields.Integer,
+        'student_id': rfields.Integer,
+        'teacher_id': rfields.Integer,
+        'ask_id': rfields.Integer,
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
+        'answer_text': rfields.String,
+        'voice_url': rfields.String,
+        'voice_duration': rfields.String,
+        'imgs': rfields.List(rfields.String),
+        'answer_rate': rfields.Integer
+    }
+
+    @marshal_with(answer_info)
     @use_args(answer_args)
-    def post(self, args):
-        a_id = args['ask_id']
+    def post(self, args, ask_id):
+        a_id = ask_id
         abort_if_ask_doesnt_exist(a_id)
         ask = Ask.query.get(a_id)
         sc_id = ask.school_id
+        st_id = ask.student_id
         if g.teacher_user.is_employ(sc_id) is False:
             abort(401, message='你不是这里的老师')
-        answer = Answer(
-            ask_id=a_id,
-            teacher_id=g.teacher_user.id,
-            answer_text=args['answer_text'],
-            voice_url=args['voice_url'],
-            voice_duration=args['voice_duration']
-        )
-        db.session.add(answer)
-        db.session.commit()
         img_ids = args['img_ids']
         img_list = img_ids.rsplit(',')
         imgs = []
         for i in img_list:
             img = Topicimage.query.get(i)
-            img.answer_id = answer.id
-            imgs.append(img)
-        db.session.add_all(imgs)
+            if img is None:
+                abort(401, message='图片不存在')
+            imgs.append(img.img_url)
+        answer = Answer(
+            teacher_id=g.teacher_user.id,
+            student_id=st_id,
+            answer_text=args['answer_text'],
+            voice_url=args['voice_url'],
+            voice_duration=args['voice_duration'],
+            img_ids=img_ids
+        )
+        ask.answers.append(answer)
+        db.session.add(answer)
         db.session.commit()
+        answer.imgs = imgs
         return answer, 200
 
+    @marshal_with(answer_info)
+    def get(self, ask_id):
+        answers = Ask.query.get(ask_id).answers
+        for answer in answers:
+            img_ids = answer.img_ids
+            img_list = img_ids.rsplit(',')
+            imgs = []
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                imgs.append(img.img_url)
+            answer.imgs = imgs
+        return answers, 200
+            
 
 school_api.add_resource(Coursex, '/course', endpoint='course')
 
@@ -482,4 +517,4 @@ school_api.add_resource(Studentx, '/<school_id>/student/<student_id>', endpoint=
 school_api.add_resource(Questions, '/student/asks', endpoint='asks')
 school_api.add_resource(Question, '/student/ask/<id>', endpoint='ask')
 
-school_api.add_resource(TeacherAnswer, '/student/TeacherAnswer', endpoint='answer')
+school_api.add_resource(TeacherAnswers, '/student/<ask_id>/answers', endpoint='answers')

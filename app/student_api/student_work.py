@@ -37,11 +37,6 @@ class Questions(Resource):
         'per_page': fields.Int(missing=10)
     }
 
-    img_list = {
-        'id': rfields.Integer,
-        'img_url': rfields.String
-    }
-
     answer_info = {
         'id': rfields.Integer,
         'student_id': rfields.Integer,
@@ -52,7 +47,7 @@ class Questions(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answer_rate': rfields.Integer
     }
 
@@ -64,9 +59,9 @@ class Questions(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'is_answer': rfields.Boolean
+        'be_answered': rfields.Boolean
     }
 
     ask_list_info = {
@@ -87,24 +82,23 @@ class Questions(Resource):
             abort(401, message='你的提问次数已经用完了')
         img_ids = args['img_ids']
         img_list = img_ids.rsplit(',')
-        ask = Ask(
-            school_id=s_id,
-            student_id=g.student_user.id,
-            ask_text=args['ask_text'],
-            voice_url=args['voice_url'],
-            voice_duration=args['voice_duration']
-        )
-        db.session.add(ask)
-        db.session.commit()
         imgs = []
         for i in img_list:
             img = Topicimage.query.get(i)
             if img is None:
                 abort(401, message='图片不存在')
-            img.ask_id = ask.id
-            imgs.append(img)
-        db.session.add_all(imgs)
+            imgs.append(img.img_url)
+        ask = Ask(
+            school_id=s_id,
+            student_id=g.student_user.id,
+            ask_text=args['ask_text'],
+            voice_url=args['voice_url'],
+            voice_duration=args['voice_duration'],
+            img_ids=img_ids
+        )
+        db.session.add(ask)
         db.session.commit()
+        ask.imgs = imgs
         member_info = SchoolStudent.query.filter_by(
             school_id=s_id,
             student_id=g.student_user.id
@@ -139,6 +133,16 @@ class Questions(Resource):
         next = None
         if pagination.has_next:
             next = url_for('student_api.asks', s_id=s_id, page=page+1, per_page=per_page)
+
+        for ask in asks:
+            img_ids = ask.img_ids
+            img_list = img_ids.rsplit(',')
+            imgs = []
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                imgs.append(img.img_url)
+            ask.imgs = imgs
+        
         result = {
             'asks': asks,
             'prev': prev,
@@ -164,7 +168,7 @@ class Question(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answer_rate': rfields.Integer
     }
 
@@ -176,9 +180,9 @@ class Question(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'topicimages': rfields.Nested(img_list),
+        'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'is_answer': rfields.Boolean
+        'be_answered': rfields.Boolean
     }
 
     @marshal_with(ask_info)
@@ -187,6 +191,13 @@ class Question(Resource):
         ask = Ask.query.get(id)
         if g.student_user.id != ask.student_id:
             abort(401, message='没有权限')
+        img_ids = ask.img_ids
+        img_list = img_ids.rsplit(',')
+        imgs = []
+        for i in img_list:
+            img = Topicimage.query.get(i)
+            imgs.append(img.img_url)
+        ask.imgs = imgs
         return ask, 200
 
     def delete(self, id):

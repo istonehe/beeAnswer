@@ -240,6 +240,23 @@ v1/school/student/ask/<id>
     http --auth 13700000001:123456 GET:5000/v1/school/student/ask/1
 
 
+### 回答问题
+v1/school/student/<ask_id>/answers  
+answer_text  
+voice_url  
+voice_duration  
+img_ids  
+
+    http --json --auth 13700000001:123456 POST :5000/v1/school/student/1/answers answer_text=回答内容001 img_ids=2,3
+
+
+### 查看回答列表
+v1/school/student/<ask_id>/answers
+
+    http --json --auth 13700000001:123456 GET :5000/v1/school/student/1/answers
+
+
+
 学生方
 ------
 
@@ -264,7 +281,7 @@ school_id
 ask_text  
 img_ids  
 
-    http --json --auth 15900000001:123456 :5000/v1/student/ask school_id=1 ask_text=问题内容 img_ids=1,2,3
+    http --json --auth 15900000001:123456 POST :5000/v1/student/asks school_id=1 ask_text=问题内容 img_ids=1,2,3
 
 
 ### 获取问题列表
@@ -289,6 +306,8 @@ v1/student/ask/<id>  delete
 
 
 
+
+
 Public
 ------
 
@@ -296,3 +315,11 @@ Public
 v1/public/uploads 
 
     http -f --auth user:password :5000/v1/public/uploads file@bee.jpg
+
+
+
+------
+bug  
+
+------
+images one to many is wrong

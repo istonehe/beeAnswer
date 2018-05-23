@@ -329,8 +329,8 @@ class Ask(db.Model):
     ask_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
-    is_answer = db.Column(db.Boolean, default=False)
-    topicimages = db.relationship('Topicimage', backref='ask', lazy='select')
+    be_answered = db.Column(db.Boolean, default=False)
+    img_ids = db.Column(db.String(256))
     answers = db.relationship(
         'Answer',
         backref='ask',
@@ -340,11 +340,17 @@ class Ask(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
 
+    # 当增加或移除答案时，都要对be_answered值进行设置
     @staticmethod
-    def set_is_answer():
-        pass
+    def be_answered_listener(target, value, initiator):
+        if len(target.answers):
+            target.be_answered = True
+        else:
+            target.be_answered = False
 
 
+db.event.listen(Ask.answers, 'append', Ask.be_answered_listener)
+db.event.listen(Ask.answers, 'remove', Ask.be_answered_listener)
 
 
 class Answer(db.Model):
@@ -354,7 +360,7 @@ class Answer(db.Model):
     answer_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
-    topicimages = db.relationship('Topicimage', backref='answer', lazy='select')
+    img_ids = db.Column(db.String(256))
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     ask_id = db.Column(db.Integer, db.ForeignKey('asks.id'))
@@ -367,8 +373,6 @@ class Topicimage(db.Model):
     img_url = db.Column(db.String(256))
     auth_telephone = db.Column(db.Integer)
     img_sort = db.Column(db.Integer)
-    ask_id = db.Column(db.Integer, db.ForeignKey('asks.id'))
-    answer_id = db.Column(db.Integer, db.ForeignKey('answers.id'))
 
 
 class Feedback(db.Model):

@@ -311,7 +311,6 @@ class TeacherList(Resource):
         s_id = args['school_id']
         page = args['page']
         per_page = args['per_page']
-        abort_if_school_doesnt_exist(s_id)
         if s_id == 0:
             pagination = Teacher.query.paginate(
                 page=page,
@@ -319,6 +318,7 @@ class TeacherList(Resource):
                 error_out=True
             )
         else:
+            abort_if_school_doesnt_exist(s_id)
             pagination = School.query.get(s_id).teachers.paginate(
                 page=page,
                 per_page=per_page,

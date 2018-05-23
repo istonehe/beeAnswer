@@ -331,16 +331,27 @@ class Ask(db.Model):
     voice_duration = db.Column(db.String(16))
     is_answer = db.Column(db.Boolean, default=False)
     topicimages = db.relationship('Topicimage', backref='ask', lazy='select')
-    answers = db.relationship('Answer', backref='ask', lazy='select')
+    answers = db.relationship(
+        'Answer',
+        backref='ask',
+        lazy='select',
+        cascade="all, delete, delete-orphan"
+    )
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     school_id = db.Column(db.Integer, db.ForeignKey('schools.id'))
+
+    @staticmethod
+    def set_is_answer():
+        pass
+
+
 
 
 class Answer(db.Model):
     __tablename__ = 'answers'
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    ask_text = db.Column(db.Text)
+    answer_text = db.Column(db.Text)
     voice_url = db.Column(db.String(256))
     voice_duration = db.Column(db.String(16))
     topicimages = db.relationship('Topicimage', backref='answer', lazy='select')

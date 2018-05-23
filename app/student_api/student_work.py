@@ -17,6 +17,11 @@ def abort_if_student_doesnt_exist(id):
         abort(404, message='学生不存在')
 
 
+def abort_if_ask_doesnt_exist(id):
+    if Ask.query.get(id) is None:
+        abort(404, message='问题不存在')
+
+
 class Questions(Resource):
     ask_args = {
         'school_id': fields.Int(required=True),
@@ -94,6 +99,8 @@ class Questions(Resource):
         imgs = []
         for i in img_list:
             img = Topicimage.query.get(i)
+            if img is None:
+                abort(401, message='图片不存在')
             img.ask_id = ask.id
             imgs.append(img)
         db.session.add_all(imgs)
@@ -141,6 +148,57 @@ class Questions(Resource):
         return result, 200
 
 
+class Question(Resource):
+    img_list = {
+        'id': rfields.Integer,
+        'img_url': rfields.String
+    }
+
+    answer_info = {
+        'id': rfields.Integer,
+        'student_id': rfields.Integer,
+        'school_id': rfields.Integer,
+        'teacher_id': rfields.Integer,
+        'ask_id': rfields.Integer,
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
+        'ask_text': rfields.String,
+        'voice_url': rfields.String,
+        'voice_duration': rfields.String,
+        'topicimages': rfields.Nested(img_list),
+        'answer_rate': rfields.Integer
+    }
+
+    ask_info = {
+        'id': rfields.Integer,
+        'student_id': rfields.Integer,
+        'school_id': rfields.Integer,
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
+        'ask_text': rfields.String,
+        'voice_url': rfields.String,
+        'voice_duration': rfields.String,
+        'topicimages': rfields.Nested(img_list),
+        'answers': rfields.Nested(answer_info),
+        'is_answer': rfields.Boolean
+    }
+
+    @marshal_with(ask_info)
+    def get(self, id):
+        abort_if_ask_doesnt_exist(id)
+        ask = Ask.query.get(id)
+        if g.student_user.id != ask.student_id:
+            abort(401, message='没有权限')
+        return ask, 200
+
+    def delete(self, id):
+        abort_if_ask_doesnt_exist(id)
+        ask = Ask.query.get(id)
+        if g.student_user.id != ask.student_id:
+            abort(401, message='没有权限')
+        db.session.delete(ask)
+        db.session.commit()
+        return '', 204
+
+
 class Testtt(Resource):
     test_args = {
         'kaca': fields.Str(missing=None)
@@ -152,5 +210,6 @@ class Testtt(Resource):
 
 
 student_api.add_resource(Questions, '/asks', endpoint='asks')
+student_api.add_resource(Question, '/ask/<id>', endpoint='ask')
 
 student_api.add_resource(Testtt, '/test')

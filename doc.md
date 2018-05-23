@@ -226,6 +226,19 @@ vip_expire
     http --json --auth teacher:password PUT :5000/v1/school/1/student/1 vip_times=50 nomal_times=5 vip_expire=2018-05-19T07:47:06.000Z
 
 
+### 获取学生问题列表
+v1/school/student/asks  
+school_id  
+student_id  默认为0（表示全部）
+
+    http --auth 13700000001:123456 GET :5000/v1/school/student/asks school_id=1 student_id=1
+
+
+### 获取学生问题详情
+v1/school/student/ask/<id>  
+
+    http --auth 13700000001:123456 GET:5000/v1/school/student/ask/1
+
 
 学生方
 ------
@@ -246,7 +259,7 @@ v1/student/token
 
 
 ### 提交问题
-v1/student/ask  post  
+v1/student/asks  post  
 school_id  
 ask_text  
 img_ids  
@@ -264,7 +277,16 @@ per_page
 
 
 ### 获取问题详情
-v1/student/ask/
+v1/student/ask/<id>  get  
+
+    http --auth 15900000001:123456 GET :5000/v1/student/ask/2
+
+
+### 删除问题
+v1/student/ask/<id>  delete  
+
+    http --auth 15900000002:123456 delete :5000/v1/student/ask/49
+
 
 
 Public

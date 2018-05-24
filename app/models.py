@@ -331,6 +331,7 @@ class Ask(db.Model):
     voice_duration = db.Column(db.String(16))
     be_answered = db.Column(db.Boolean, default=False)
     img_ids = db.Column(db.String(256))
+    answer_grate = db.Column(db.Integer, default=0)
     answers = db.relationship(
         'Answer',
         backref='ask',
@@ -342,15 +343,18 @@ class Ask(db.Model):
 
     # 当增加或移除答案时，都要对be_answered值进行设置
     @staticmethod
-    def be_answered_listener(target, value, initiator):
+    def be_answered_listener_append(target, value, initiator):
+            target.be_answered = True
+
+    def be_answered_listener_remove(target, value, initiator):
         if len(target.answers):
             target.be_answered = True
         else:
             target.be_answered = False
 
 
-db.event.listen(Ask.answers, 'append', Ask.be_answered_listener)
-db.event.listen(Ask.answers, 'remove', Ask.be_answered_listener)
+db.event.listen(Ask.answers, 'append', Ask.be_answered_listener_append)
+db.event.listen(Ask.answers, 'remove', Ask.be_answered_listener_remove)
 
 
 class Answer(db.Model):
@@ -364,7 +368,6 @@ class Answer(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'))
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'))
     ask_id = db.Column(db.Integer, db.ForeignKey('asks.id'))
-    answer_rate = db.Column(db.Integer, default=0)
 
 
 class Topicimage(db.Model):

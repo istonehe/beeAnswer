@@ -1,7 +1,7 @@
 from flask import g, url_for
 from datetime import datetime
 from flask_restful import Resource, marshal_with, abort, fields as rfields
-from webargs import fields
+from webargs import fields, validate
 from webargs.flaskparser import use_args
 from ..models import Teacher, School, Student, SchoolStudent, Ask, Answer, Topicimage
 from .. import db
@@ -133,6 +133,11 @@ def abort_if_student_doesnt_exist(id):
 def abort_if_ask_doesnt_exist(id):
     if Ask.query.get(id) is None:
         abort(404, message='问题不存在')
+
+
+def abort_if_answer_doesnt_exist(id):
+    if Answer.query.get(id) is None: 
+        abort(404, message='答案不存在')
 
 
 class Coursex(Resource):
@@ -305,7 +310,8 @@ class Questions(Resource):
         'school_id': fields.Int(required=True),
         'student_id': fields.Int(missing='0'),
         'page': fields.Int(missing=1),
-        'per_page': fields.Int(missing=10)
+        'per_page': fields.Int(missing=10),
+        'answered': fields.Int(validate=validate.OneOf([0, 1, 2]), missing=0)
     }
 
     answer_info = {
@@ -318,8 +324,7 @@ class Questions(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'imgs': rfields.List(rfields.String),
-        'answer_rate': rfields.Integer
+        'imgs': rfields.List(rfields.String)
     }
 
     ask_info = {
@@ -332,7 +337,8 @@ class Questions(Resource):
         'voice_duration': rfields.String,
         'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'be_answered': rfields.Boolean
+        'be_answered': rfields.Boolean,
+        'answer_grate': rfields.Integer
     }
 
     ask_list_info = {
@@ -349,24 +355,55 @@ class Questions(Resource):
         st_id = args['student_id']
         page = args['page']
         per_page = args['per_page']
+        answered = args['answered']
         abort_if_school_doesnt_exist(sc_id)
         if g.teacher_user.is_employ(sc_id) is False:
             abort(401, message='你不是这里的老师')
         if st_id == 0:
-            pagination = Ask.query.filter_by(school_id=sc_id).paginate(
-                page=page, per_page=per_page, error_out=True
-            )
+            if answered == 0:
+                pagination = Ask.query.filter_by(school_id=sc_id).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
+            if answered == 1:
+                pagination = Ask.query.filter_by(
+                    school_id=sc_id, be_answered=False
+                ).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
+            if answered == 2:
+                pagination = Ask.query.filter_by(
+                    school_id=sc_id, be_answered=True
+                ).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
         else:
             abort_if_student_doesnt_exist(st_id)
             student = Student.query.get(st_id)
             if student.is_school_joined(sc_id) is False:
                 abort(401, message='不是这个学校/机构的学生')
-            pagination = Ask.query.filter_by(
-                school_id=sc_id,
-                student_id=st_id
-            ).paginate(
-                page=page, per_page=per_page, error_out=True
-            )
+            if answered == 0:
+                pagination = Ask.query.filter_by(
+                    school_id=sc_id,
+                    student_id=st_id
+                ).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
+            if answered == 1:
+                pagination = Ask.query.filter_by(
+                    school_id=sc_id,
+                    student_id=st_id,
+                    be_answered=False
+                ).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
+            if answered == 2:
+                pagination = Ask.query.filter_by(
+                    school_id=sc_id,
+                    student_id=st_id,
+                    be_answered=True
+                ).paginate(
+                    page=page, per_page=per_page, error_out=True
+                )
         asks = pagination.items
         prev = None
         if pagination.has_prev:
@@ -403,8 +440,7 @@ class Question(Resource):
         'ask_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'imgs': rfields.List(rfields.String),
-        'answer_rate': rfields.Integer
+        'imgs': rfields.List(rfields.String)
     }
 
     ask_info = {
@@ -417,7 +453,8 @@ class Question(Resource):
         'voice_duration': rfields.String,
         'imgs': rfields.List(rfields.String),
         'answers': rfields.Nested(answer_info),
-        'be_answered': rfields.Boolean
+        'be_answered': rfields.Boolean,
+        'answer_grate': rfields.Integer
     }
 
     @marshal_with(ask_info)
@@ -454,8 +491,7 @@ class TeacherAnswers(Resource):
         'answer_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
-        'imgs': rfields.List(rfields.String),
-        'answer_rate': rfields.Integer
+        'imgs': rfields.List(rfields.String)
     }
 
     @marshal_with(answer_info)
@@ -465,9 +501,8 @@ class TeacherAnswers(Resource):
         abort_if_ask_doesnt_exist(a_id)
         ask = Ask.query.get(a_id)
         sc_id = ask.school_id
-        st_id = ask.student_id
         if g.teacher_user.is_employ(sc_id) is False:
-            abort(401, message='你不是这里的老师')
+            abort(401, message='没有权限')
         img_ids = args['img_ids']
         img_list = img_ids.rsplit(',')
         imgs = []
@@ -478,7 +513,6 @@ class TeacherAnswers(Resource):
             imgs.append(img.img_url)
         answer = Answer(
             teacher_id=g.teacher_user.id,
-            student_id=st_id,
             answer_text=args['answer_text'],
             voice_url=args['voice_url'],
             voice_duration=args['voice_duration'],
@@ -492,7 +526,12 @@ class TeacherAnswers(Resource):
 
     @marshal_with(answer_info)
     def get(self, ask_id):
+        abort_if_ask_doesnt_exist(ask_id)
         answers = Ask.query.get(ask_id).answers
+        ask = Ask.query.get(ask_id)
+        sc_id = ask.school_id
+        if g.teacher_user.is_employ(sc_id) is False:
+            abort(401, message='没有权限')
         for answer in answers:
             img_ids = answer.img_ids
             img_list = img_ids.rsplit(',')
@@ -502,7 +541,18 @@ class TeacherAnswers(Resource):
                 imgs.append(img.img_url)
             answer.imgs = imgs
         return answers, 200
-            
+
+    def delete(self, answer_id):
+        abort_if_answer_doesnt_exist(answer_id)
+        answer = Answer.query.get(answer_id)
+        if g.teacher_user.id != answer.teacher_id:
+            abort(401, message='没有权限')
+        ask = Ask.query.get(answer.ask_id)
+        ask.answers.remove(answer)
+        db.session.delete(answer)
+        db.session.commit()
+        return '', 204
+
 
 school_api.add_resource(Coursex, '/course', endpoint='course')
 
@@ -517,4 +567,5 @@ school_api.add_resource(Studentx, '/<school_id>/student/<student_id>', endpoint=
 school_api.add_resource(Questions, '/student/asks', endpoint='asks')
 school_api.add_resource(Question, '/student/ask/<id>', endpoint='ask')
 
-school_api.add_resource(TeacherAnswers, '/student/<ask_id>/answers', endpoint='answers')
+school_api.add_resource(TeacherAnswers, '/student/ask/<ask_id>/answers', endpoint='answers')
+school_api.add_resource(TeacherAnswers, '/student/answers/<answer_id>')

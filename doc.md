@@ -230,6 +230,7 @@ vip_expire
 v1/school/student/asks  
 school_id  
 student_id  默认为0（表示全部）
+answered  0  1  2  
 
     http --auth 13700000001:123456 GET :5000/v1/school/student/asks school_id=1 student_id=1
 
@@ -241,19 +242,19 @@ v1/school/student/ask/<id>
 
 
 ### 回答问题
-v1/school/student/<ask_id>/answers  
+v1/school/student/ask/<ask_id>/answers  
 answer_text  
 voice_url  
 voice_duration  
 img_ids  
 
-    http --json --auth 13700000001:123456 POST :5000/v1/school/student/1/answers answer_text=回答内容001 img_ids=2,3
+    http --json --auth 13700000001:123456 POST :5000/v1/school/student/ask/1/answers answer_text=回答内容001 img_ids=2,3
 
 
 ### 查看回答列表
 v1/school/student/<ask_id>/answers
 
-    http --json --auth 13700000001:123456 GET :5000/v1/school/student/1/answers
+    http --json --auth 13700000001:123456 GET :5000/v1/school/student/ask/1/answers
 
 
 
@@ -289,6 +290,7 @@ v1/student/asks
 school_id  
 page  
 per_page  
+answered  0  1  2  
 
     http --json --auth 15900000001:123456 GET :5000/v1/student/asks school_id=1
 
@@ -305,6 +307,38 @@ v1/student/ask/<id>  delete
     http --auth 15900000002:123456 delete :5000/v1/student/ask/49
 
 
+### 增加答案评论
+v1/student/ask/<id>  post    
+answer_text  
+voice_url  
+voice_duration  
+img_ids  
+
+    http --json --auth 15900000002:123456 POST :5000/v1/student/ask/1/answers answer_text=学生回复内容 img_ids=1,3
+    
+### 查看答案列表
+v1/student/ask/<ask_id>/answers  
+
+    http --json --auth 15900000001:123456 GET :5000/v1/student/ask/1/answers
+
+
+### 删除答案评论
+v1/student/ask/answers/<id>  DELETE  
+
+    http --json --auth 15900000001:123456 DELETE :5000/v1/student/ask/answers/5
+
+
+### 加入学校
+v1/student/joinschool/<school_id> post
+
+    http --json --auth 15900000001:123456 post :5000/v1/student/joinschool/3
+
+
+### 答案评分反馈
+v1/student/ask/1/answergrate  put
+grate 0 1 2  default=0  1听懂  2没听懂
+
+    http --json --auth 15900000001:123456 PUT :5000/v1/student/ask/1/answergrate grate=0
 
 
 

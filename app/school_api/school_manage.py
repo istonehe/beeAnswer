@@ -64,7 +64,7 @@ school_info = {
         'intro': rfields.String,
         'imgurl': rfields.String,
         'email': rfields.String,
-        'telephone': rfields.Integer,
+        'telephone': rfields.String,
         'gender': rfields.Integer
     })
 }
@@ -76,7 +76,7 @@ teacher_info = {
     'intro': rfields.String,
     'imgurl': rfields.String,
     'email': rfields.String,
-    'telephone': rfields.Integer,
+    'telephone': rfields.String,
     'gender': rfields.Integer,
     'answercount': rfields.Integer
 }
@@ -86,7 +86,7 @@ student_paging_list = {
         'id': rfields.Integer,
         'nickname': rfields.String,
         'rename': rfields.String,
-        'telephone': rfields.Integer,
+        'telephone': rfields.String,
         'imgurl': rfields.String,
         'fromwhere': rfields.String,
         'timestamp': rfields.DateTime(dt_format='iso8601'),
@@ -102,7 +102,7 @@ student_info = {
     'id': rfields.Integer,
     'nickname': rfields.String,
     'rename': rfields.String,
-    'telephone': rfields.Integer,
+    'telephone': rfields.String,
     'imgurl': rfields.String,
     'fromwhere': rfields.String,
     'timestamp': rfields.DateTime(dt_format='iso8601'),

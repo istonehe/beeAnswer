@@ -90,7 +90,7 @@ class School(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), unique=True)
     intro = db.Column(db.Text)
-    admin = db.Column(db.Integer)
+    admin = db.Column(db.String(16))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     courses = db.relationship(
@@ -126,7 +126,7 @@ class Teacher(db.Model):
     intro = db.Column(db.Text)
     imgurl = db.Column(db.String(256))
     email = db.Column(db.String(64), unique=True)
-    telephone = db.Column(db.Integer, unique=True, index=True)
+    telephone = db.Column(db.String(16), unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
     wxopenid = db.Column(db.String(32), unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -230,7 +230,7 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nickname = db.Column(db.String(128))
     rename = db.Column(db.String(128))
-    telephone = db.Column(db.Integer, unique=True)
+    telephone = db.Column(db.String(16), unique=True)
     password_hash = db.Column(db.String(128))
     imgurl = db.Column(db.String(256))
     fromwhere = db.Column(db.String(128))
@@ -374,7 +374,7 @@ class Topicimage(db.Model):
     __tablename__ = 'topicimages'
     id = db.Column(db.Integer, primary_key=True)
     img_url = db.Column(db.String(256))
-    auth_telephone = db.Column(db.Integer)
+    auth_telephone = db.Column(db.String(16))
     img_sort = db.Column(db.Integer)
 
 

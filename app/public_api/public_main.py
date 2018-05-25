@@ -18,9 +18,9 @@ basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pard
 
 # use_args
 teacher_reg = {
-    'telephone': fields.Int(
+    'telephone': fields.Str(
         required=True,
-        validate=lambda p: re.match('^1[34578]\\d{9}$', str(p)) is not None
+        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
     ),
     'nickname': fields.Str(required=True),
     'tcode': fields.Str(required=True),
@@ -28,25 +28,21 @@ teacher_reg = {
 }
 
 student_reg = {
-    'telephone': fields.Int(
+    'telephone': fields.Str(
         required=True,
-        validate=lambda p: re.match('^1[34578]\\d{9}$', str(p)) is not None
+        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
     ),
     'nickname': fields.Str(required=True),
     'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
 }
 
 # marshal_with
-uploadfile_info = {
-    'url': rfields.String,
-}
-
 teacher_info = {
     'id': rfields.Integer,
     'nickname': rfields.String,
     'rename': rfields.String,
     'intro': rfields.String,
-    'telephone': rfields.Integer
+    'telephone': rfields.String
 }
 
 student_info = {
@@ -54,7 +50,7 @@ student_info = {
     'nickname': rfields.String,
     'rename': rfields.String,
     'imgurl': rfields.String,
-    'telephone': rfields.Integer,
+    'telephone': rfields.String,
     'fromwhere': rfields.String,
     'wxopenid': rfields.String,
     'timestamp': rfields.DateTime(dt_format='iso8601'),

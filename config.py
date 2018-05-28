@@ -28,7 +28,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    UPLOAD_FOLDER = '/var/www/uploads/'
+    UPLOAD_FOLDER = '/srv/bee/uploads/'
 
 
 config = {

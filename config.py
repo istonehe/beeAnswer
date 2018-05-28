@@ -8,8 +8,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_AS_ASCII = False
     RESTFUL_JSON = dict(ensure_ascii=False)
-
-    UPLOAD_FOLDER = 'uploads'
+    UPLOAD_FOLDER = os.path.join(basedir, 'uploads', os.path.pardir)
     ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'mp3'])
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
@@ -29,6 +28,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    UPLOAD_FOLDER = '/var/www/uploads/'
 
 
 config = {

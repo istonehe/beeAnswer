@@ -2,7 +2,7 @@ import os
 import re
 import hashlib
 import time
-from flask import g, request, current_app, url_for
+from flask import g, request, current_app, url_for, send_from_directory
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
@@ -14,8 +14,7 @@ from . import public_api
 
 auth = HTTPBasicAuth()
 
-basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir)
-
+basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir, os.path.pardir, os.path.pardir)
 # use_args
 teacher_reg = {
     'telephone': fields.Str(
@@ -107,16 +106,16 @@ class UploadFile(Resource):
             filename = secure_filename(file.filename)
             md5filename = rename_file(filename)
             upfolder = current_app.config['UPLOAD_FOLDER']
-            file.save(os.path.join(basedir, 'static', upfolder, md5filename))
+            file.save(os.path.join(upfolder, md5filename))
             topicimage = Topicimage(
-                img_url=url_for('static', filename=upfolder + '/' + md5filename),
+                img_url='uploads' + '/' + md5filename,
                 auth_telephone=g.user.telephone
             )
             db.session.add(topicimage)
             db.session.commit()
             result = {
                 'id': topicimage.id,
-                'url': url_for('static', filename=upfolder + '/' + md5filename),
+                'url': 'uploads' + '/' + md5filename,
                 'auth_telephone': topicimage.auth_telephone
             }
             return result, 200

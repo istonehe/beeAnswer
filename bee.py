@@ -6,7 +6,8 @@ from app.models import Admin, School, Tcode, Course, Teacher, Student, Ask, Answ
 
 app = create_app(os.getenv('FLASK_ENV') or 'default')
 migrate = Migrate(app, db)
-
+ 
+print('oooooooooooooooooooooooooooo', os.getenv('FLASK_ENV'))
 
 @app.shell_context_processor
 def make_shell_context():

@@ -93,6 +93,8 @@ class School(db.Model):
     admin = db.Column(db.String(16))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
+    wx_appid = db.Column(db.String(32))
+    wx_appsecret = db.Column(db.String(32)) 
     courses = db.relationship(
         'Course',
         backref='school',
@@ -128,7 +130,8 @@ class Teacher(db.Model):
     email = db.Column(db.String(64), unique=True)
     telephone = db.Column(db.String(16), unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
-    wxopenid = db.Column(db.String(32), unique=True)
+    wx_openid = db.Column(db.String(32), unique=True)
+    wx_unionid = db.Column(db.String(32), unique=True) 
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
     schools = db.relationship(
@@ -235,7 +238,8 @@ class Student(db.Model):
     imgurl = db.Column(db.String(256))
     fromwhere = db.Column(db.String(128))
     expevalue = db.Column(db.Integer)
-    wxopenid = db.Column(db.String(32), unique=True)
+    wx_openid = db.Column(db.String(32), unique=True)
+    wx_unionid = db.Column(db.String(32), unique=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     asks = db.relationship('Ask', backref='student', lazy='dynamic')

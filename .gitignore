@@ -102,3 +102,6 @@ ENV/
 
 # fabric
 fabfile.py
+
+# vscode
+.vscode/

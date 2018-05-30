@@ -16,7 +16,7 @@ auth = HTTPBasicAuth()
 
 basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir, os.path.pardir, os.path.pardir)
 # use_args
-teacher_reg = {
+teacher_regs = {
     'telephone': fields.Str(
         required=True,
         validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
@@ -26,7 +26,7 @@ teacher_reg = {
     'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
 }
 
-student_reg = {
+student_regs = {
     'telephone': fields.Str(
         required=True,
         validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
@@ -123,7 +123,7 @@ class UploadFile(Resource):
 
 class TeacherReg(Resource):
     @marshal_with(teacher_info, envelope='resource')
-    @use_args(teacher_reg)
+    @use_args(teacher_regs)
     def post(self, args):
         tcode = args['tcode']
         teacher = Teacher(
@@ -140,7 +140,7 @@ class TeacherReg(Resource):
 
 class StudentReg(Resource):
     @marshal_with(student_info, envelope='resource')
-    @use_args(student_reg)
+    @use_args(student_regs)
     def post(self, args):
         student = Student(
             telephone=args['telephone'],
@@ -150,6 +150,18 @@ class StudentReg(Resource):
         db.session.add(student)
         db.session.commit()
         return student, 201
+
+
+class WxLogin(Resource):
+  
+    wxlogin_args = {
+        'code': fields.Str(required=True),
+        'scholl_id': rfields.Integer
+    }
+
+    @use_args(wxlogin_args)
+    def post(self):
+        pass
 
 
 public_api.add_resource(UploadFile, '/uploads')

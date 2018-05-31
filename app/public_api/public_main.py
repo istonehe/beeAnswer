@@ -186,7 +186,8 @@ class WxStudentLogin(Resource):
 
     @use_args(wxlogin_args)
     def post(self, args):
-        school = School.query.get(args['school_id'])
+        sc_id = args['school_id']
+        school = School.query.get(sc_id)
         if school is None:
             abort(404, code=0, message='Schoolnot found')
         appid = school.wx_appid
@@ -207,16 +208,20 @@ class WxStudentLogin(Resource):
         openid = r.get('openid')
         session_key = r.get('session_key')
         student = Student.query.filter_by(openid=openid).first()
+        # openid已经存在
         if student:
             student.wx_sessionkey = session_key
             db.session.commit()
-            token = student.generate_auth_token(60*60*24*31)
-            return {'code': 1, 'token': token, 'expiration': 60*60*24*31}, 200
+            token = student.generate_auth_token(60*60*24*15)
+            return {'code': 1, 'token': token, 'expiration': 60*60*24*15}, 200
+        # 新的openid入库
         newstudent = Student(wx_openid=openid, wx_sessionkey=session_key)
         db.session.add(newstudent)
         db.session.commit()
-        token = newstudent.generate_auth_token(60*60*24*31)
-        return {'code': 1, 'token': token, 'expiration': 60*60*24*31}, 200
+        newstudent.join_school(sc_id)
+        token = newstudent.generate_auth_token(60*60*24*15)
+        return {'code': 1, 'token': token, 'expiration': 60*60*24*15}, 200
+
 
 
 public_api.add_resource(UploadFile, '/uploads')

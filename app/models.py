@@ -94,7 +94,7 @@ class School(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     wx_appid = db.Column(db.String(32))
-    wx_appsecret = db.Column(db.String(32)) 
+    wx_appsecret = db.Column(db.String(32))
     courses = db.relationship(
         'Course',
         backref='school',
@@ -131,7 +131,8 @@ class Teacher(db.Model):
     telephone = db.Column(db.String(16), unique=True, index=True)
     gender = db.Column(db.Integer, default=0)
     wx_openid = db.Column(db.String(32), unique=True)
-    wx_unionid = db.Column(db.String(32), unique=True) 
+    wx_unionid = db.Column(db.String(32), unique=True)
+    wx_sessionkey = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     answers = db.relationship('Answer', backref='teacher', lazy='dynamic')
     schools = db.relationship(
@@ -240,6 +241,7 @@ class Student(db.Model):
     expevalue = db.Column(db.Integer)
     wx_openid = db.Column(db.String(32), unique=True)
     wx_unionid = db.Column(db.String(32), unique=True)
+    wx_sessionkey = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     asks = db.relationship('Ask', backref='student', lazy='dynamic')
@@ -314,7 +316,7 @@ class Student(db.Model):
         if member_info.nomal_times > 0:
             return True
         return False
-
+   
 
 class Course(db.Model):
     __tablename__ = 'courses'

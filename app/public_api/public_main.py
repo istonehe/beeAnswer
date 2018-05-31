@@ -2,15 +2,20 @@ import os
 import re
 import hashlib
 import time
-from flask import g, request, current_app, url_for, send_from_directory
+import requests
+from flask import g, request, current_app
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
 from webargs import fields
 from webargs.flaskparser import use_args
-from ..models import Teacher, Student, Topicimage
+from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as _ConnectionError
+from ..models import Teacher, Student, Topicimage, School
 from .. import db
 from . import public_api
+
+TIMEOUT = 2
+wxurl = 'https://api.weixin.qq.com/sns/jscode2session'
 
 auth = HTTPBasicAuth()
 
@@ -152,19 +157,71 @@ class StudentReg(Resource):
         return student, 201
 
 
-class WxLogin(Resource):
-  
+class ConnectTimeoutError(Exception):
+    def __init__(self, code, description):
+        self.code = code
+        self.description = description
+
+    def __str__(self):
+        return '%s: %s' % (self.code, self.description)
+        abort(400, code=self.code, message=self.description)
+
+
+class ConnectionError(Exception):
+    def __init__(self, code, description):
+        self.code = code
+        self.description = description
+
+    def __str__(self):
+        abort(400, code=self.code, message=self.description)
+
+
+# 微信鉴权
+class WxStudentLogin(Resource):
+
     wxlogin_args = {
         'code': fields.Str(required=True),
         'scholl_id': rfields.Integer
     }
 
     @use_args(wxlogin_args)
-    def post(self):
+    def post(self, args):
+        school = School.query.get(args['school_id'])
+        if school is None:
+            abort(404, code=0, message='Schoolnot found')
+        appid = school.wx_appid
+        appsecret = school.wx_appsecret
+        code = args['code']
+        wxparams = {'appid': appid, 'secret': appsecret, 'code': code, 'grant_type': 'authorization_code'}
+        try:
+            r = requests.get(wxurl, params=wxparams, timeout=TIMEOUT).json()
+        except (ConnectTimeout, ReadTimeout):
+            raise ConnectTimeoutError(0, 'wx server connect timeout')
+        except _ConnectionError:
+            raise ConnectionError(0, 'wx server connect error')
         pass
+        # 判断微信返回errcode
+        errcode = r.get('errcode', 0)
+        if errcode:
+            abort(400, code=0, errcode=errcode, message=r.get('errmsg', ' '))
+        openid = r.get('openid')
+        session_key = r.get('session_key')
+        student = Student.query.filter_by(openid=openid).first()
+        if student:
+            student.wx_sessionkey = session_key
+            db.session.commit()
+            token = student.generate_auth_token(60*60*24*31)
+            return {'code': 1, 'token': token, 'expiration': 60*60*24*31}, 200
+        newstudent = Student(wx_openid=openid, wx_sessionkey=session_key)
+        db.session.add(newstudent)
+        db.session.commit()
+        token = newstudent.generate_auth_token(60*60*24*31)
+        return {'code': 1, 'token': token, 'expiration': 60*60*24*31}, 200
 
 
 public_api.add_resource(UploadFile, '/uploads')
 
 public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
+
+public_api.add_resource(WxStudentLogin, '/wxstlogin')

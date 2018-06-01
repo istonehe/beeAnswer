@@ -232,6 +232,8 @@ class SchoolList(Resource):
     @marshal_with(school_created, envelope='resource')
     @use_args(school_args)
     def post(self, args):
+        if School.query.filter_by(name=args['name']).first():
+            abort(401, code=0, message='学校已经存在')
         school = School(name=args['name'], intro=args['intro'], admin=args['admin_phone'])
         db.session.add(school)
         db.session.commit()
@@ -241,10 +243,11 @@ class SchoolList(Resource):
             course_name='这是一个课程案例',
             course_intro='请填写一些课程介绍',
             nomal_times=5,
-            vip_times=0,
-            school_id=school.id
+            vip_times=0
         )
         db.session.add(course)
+        db.session.commit()
+        school.courses.append(course)
         db.session.commit()
         return result, 201
 

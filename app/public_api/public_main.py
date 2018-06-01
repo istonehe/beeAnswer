@@ -130,7 +130,8 @@ class TeacherReg(Resource):
     @marshal_with(teacher_info, envelope='resource')
     @use_args(teacher_regs)
     def post(self, args):
-        tcode = args['tcode']
+        if Teacher.query.filter_by(telephone=args['telephone']).first():
+            abort(401, code=0, message='教师已经存在')
         teacher = Teacher(
             telephone=args['telephone'],
             nickname=args['nickname'],
@@ -138,7 +139,7 @@ class TeacherReg(Resource):
         )
         db.session.add(teacher)
         # 通过邀请码匹配学校并删除已经被使用的邀请码
-        if teacher.bind_school(tcode):
+        if teacher.bind_school(args['tcode']):
             result = Teacher.query.get(teacher.id)
             return result, 201
 
@@ -147,6 +148,8 @@ class StudentReg(Resource):
     @marshal_with(student_info, envelope='resource')
     @use_args(student_regs)
     def post(self, args):
+        if Student.query.filter_by(telephone=args['telephone']).first():
+            abort(401, code=0, message='学生已经存在')
         student = Student(
             telephone=args['telephone'],
             nickname=args['nickname'],
@@ -181,7 +184,7 @@ class WxStudentLogin(Resource):
 
     wxlogin_args = {
         'code': fields.Str(required=True),
-        'scholl_id': rfields.Integer
+        'school_id': fields.Int(required=True)
     }
 
     @use_args(wxlogin_args)
@@ -189,11 +192,11 @@ class WxStudentLogin(Resource):
         sc_id = args['school_id']
         school = School.query.get(sc_id)
         if school is None:
-            abort(404, code=0, message='Schoolnot found')
+            abort(404, code=0, message='School not found')
         appid = school.wx_appid
         appsecret = school.wx_appsecret
         code = args['code']
-        wxparams = {'appid': appid, 'secret': appsecret, 'code': code, 'grant_type': 'authorization_code'}
+        wxparams = {'appid': appid, 'secret': appsecret, 'js_code': code, 'grant_type': 'authorization_code'}
         try:
             r = requests.get(wxurl, params=wxparams, timeout=TIMEOUT).json()
         except (ConnectTimeout, ReadTimeout):
@@ -207,7 +210,7 @@ class WxStudentLogin(Resource):
             abort(400, code=0, errcode=errcode, message=r.get('errmsg', ' '))
         openid = r.get('openid')
         session_key = r.get('session_key')
-        student = Student.query.filter_by(openid=openid).first()
+        student = Student.query.filter_by(wx_openid=openid).first()
         # openid已经存在
         if student:
             student.wx_sessionkey = session_key
@@ -221,7 +224,6 @@ class WxStudentLogin(Resource):
         newstudent.join_school(sc_id)
         token = newstudent.generate_auth_token(60*60*24*15)
         return {'code': 1, 'token': token, 'expiration': 60*60*24*15}, 200
-
 
 
 public_api.add_resource(UploadFile, '/uploads')

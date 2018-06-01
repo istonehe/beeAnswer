@@ -316,7 +316,7 @@ class Student(db.Model):
         if member_info.nomal_times > 0:
             return True
         return False
-   
+
 
 class Course(db.Model):
     __tablename__ = 'courses'

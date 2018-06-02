@@ -117,27 +117,27 @@ student_info = {
 
 def abort_if_school_doesnt_exist(id):
     if School.query.get(id) is None:
-        abort(404, message='学校不存在')
+        abort(404, code=0, message='学校不存在')
 
 
 def abort_if_teacher_doesnt_exist(id):
     if Teacher.query.get(id) is None:
-        abort(404, message='教师不存在')
+        abort(404, code=0, message='教师不存在')
 
 
 def abort_if_student_doesnt_exist(id):
     if Student.query.get(id) is None:
-        abort(404, message='学生不存在')
+        abort(404, code=0, message='学生不存在')
 
 
 def abort_if_ask_doesnt_exist(id):
     if Ask.query.get(id) is None:
-        abort(404, message='问题不存在')
+        abort(404, code=0, message='问题不存在')
 
 
 def abort_if_answer_doesnt_exist(id):
     if Answer.query.get(id) is None: 
-        abort(404, message='答案不存在')
+        abort(404, code=0, message='答案不存在')
 
 
 class Coursex(Resource):

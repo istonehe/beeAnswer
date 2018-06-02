@@ -182,7 +182,7 @@ v1/school/<int:s_id>
 ### 查看老师详情
 v1/school/<int:s_id>/teacher/<int:t_id>  
 
-    http --json --auth teacher:password GET :5000/v1/<int>/teacher/<int>
+    http --json --auth teacher:password GET :5000/v1/school/<int>/teacher/<int>
 
 
 ### 学校移除老师
@@ -336,7 +336,7 @@ v1/student/joinschool/<school_id> post
 
 ### 答案评分反馈
 v1/student/ask/1/answergrate  put
-grate 0 1 2  default=0  1听懂  2没听懂
+grate 0 1 2  default=0未选  1听懂  2没听懂
 
     http --json --auth 15900000001:123456 PUT :5000/v1/student/ask/1/answergrate grate=0
 

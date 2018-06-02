@@ -216,14 +216,14 @@ class WxStudentLogin(Resource):
             student.wx_sessionkey = session_key
             db.session.commit()
             token = student.generate_auth_token(60*60*24*15)
-            return {'code': 1, 'token': token, 'expiration': 60*60*24*15}, 200
+            return {'code': 1, 'token': token}, 200
         # 新的openid入库
         newstudent = Student(wx_openid=openid, wx_sessionkey=session_key)
         db.session.add(newstudent)
         db.session.commit()
         newstudent.join_school(sc_id)
         token = newstudent.generate_auth_token(60*60*24*15)
-        return {'code': 1, 'token': token, 'expiration': 60*60*24*15}, 200
+        return {'code': 1, 'token': token}, 200
 
 
 public_api.add_resource(UploadFile, '/uploads')

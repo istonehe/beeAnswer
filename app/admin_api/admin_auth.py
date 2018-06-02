@@ -1,4 +1,4 @@
-from flask_restful import Resource
+from flask_restful import Resource, abort
 from flask_httpauth import HTTPBasicAuth
 from flask import g
 from ..models import Admin
@@ -24,10 +24,15 @@ def before_request():
     pass
 
 
+@auth.error_handler
+def auth_error():
+    abort(401, code=4, message='未授权')
+
+
 class GetToken(Resource):
     def get(self):
         token = g.admin_user.generate_auth_token(600)
-        return {'token': token, 'expiration': 600}
+        return {'code': 1, 'token': token, 'expiration': 600}
 
 
 admin_api.add_resource(GetToken, '/token')

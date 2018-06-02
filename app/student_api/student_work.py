@@ -9,22 +9,22 @@ from . import student_api
 
 def abort_if_school_doesnt_exist(id):
     if School.query.get(id) is None:
-        abort(404, message='学校不存在')
+        abort(404, code=0, message='学校不存在')
 
 
 def abort_if_student_doesnt_exist(id):
     if Student.query.get(id) is None:
-        abort(404, message='学生不存在')
+        abort(404, code=0, message='学生不存在')
 
 
 def abort_if_ask_doesnt_exist(id):
     if Ask.query.get(id) is None:
-        abort(404, message='问题不存在')
+        abort(404, code=0, message='问题不存在')
 
 
 def abort_if_answer_doesnt_exist(id):
-    if Answer.query.get(id) is None: 
-        abort(404, message='答案不存在')
+    if Answer.query.get(id) is None:
+        abort(404, code=0, message='答案不存在')
 
 
 class Questions(Resource):
@@ -343,6 +343,37 @@ class AnswerGrate(Resource):
         return '成功', 201
 
 
+class SchoolInfo(Resource):
+
+    school_info = {
+        'code': rfields.Integer,
+        'school': rfields.Nested({
+            'id': rfields.Integer,
+            'name': rfields.String,
+            'intro': rfields.String
+        }),
+        'course': rfields.Nested({
+            'id': rfields.Integer,
+            'course_name': rfields.String,
+            'course_intro': rfields.String
+        })
+    }
+
+    @marshal_with(school_info)
+    def get(self, school_id):
+        abort_if_school_doesnt_exist(school_id)
+        if g.student_user.is_school_joined(school_id) is False:
+            abort(401, code=0, message='不是这个学校/机构的学生')
+        school = School.query.get(school_id)
+        course = school.courses.all()[0]
+        result = {
+            'code': 1,
+            'school': school,
+            'course': course
+        }
+        return result, 200
+
+
 student_api.add_resource(Questions, '/asks', endpoint='asks')
 student_api.add_resource(Question, '/ask/<id>', endpoint='ask')
 
@@ -351,3 +382,5 @@ student_api.add_resource(StudentAnswers, '/ask/answers/<answer_id>')
 
 student_api.add_resource(JoinSchool, '/joinschool/<school_id>')
 student_api.add_resource(AnswerGrate, '/ask/<ask_id>/answergrate')
+
+student_api.add_resource(SchoolInfo, '/school/<school_id>')

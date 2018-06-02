@@ -1,5 +1,6 @@
 import string
 import random
+import json
 from datetime import datetime
 from flask import current_app
 from flask_restful import abort
@@ -157,7 +158,7 @@ class Teacher(db.Model):
     # 生成token
     def generate_auth_token(self, expiration=600):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
-        return s.dumps({'id': self.id}).decode('utf-8')
+        return s.dumps({'id': self.id, 'generate_time': json.dumps(datetime.utcnow(), default=lambda d: d.__str__())}).decode('utf-8')
 
     @staticmethod
     def verify_auth_token(token):
@@ -267,7 +268,7 @@ class Student(db.Model):
     # 生成token
     def generate_auth_token(self, expiration=600):
         s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
-        return s.dumps({'id': self.id}).decode('utf-8')
+        return s.dumps({'id': self.id, 'generate_time': json.dumps(datetime.utcnow(), default=lambda d: d.__str__())}).decode('utf-8')
 
     @staticmethod
     def verify_auth_token(token):

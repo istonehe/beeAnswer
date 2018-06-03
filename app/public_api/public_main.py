@@ -63,6 +63,11 @@ student_info = {
 }
 
 
+def abort_if_school_doesnt_exist(id):
+    if School.query.get(id) is None:
+        abort(404, code=0, message='学校不存在')
+
+
 @auth.verify_password
 def verify_password(username_or_token, password):
     teacher_user = Teacher.verify_auth_token(username_or_token)
@@ -226,9 +231,40 @@ class WxStudentLogin(Resource):
         return {'code': 1, 'token': token}, 200
 
 
+class SchoolInfo(Resource):
+
+    school_info = {
+        'code': rfields.Integer,
+        'school': rfields.Nested({
+            'id': rfields.Integer,
+            'name': rfields.String,
+            'intro': rfields.String
+        }),
+        'course': rfields.Nested({
+            'id': rfields.Integer,
+            'course_name': rfields.String,
+            'course_intro': rfields.String
+        })
+    }
+
+    @marshal_with(school_info)
+    def get(self, school_id):
+        abort_if_school_doesnt_exist(school_id)
+        school = School.query.get(school_id)
+        course = school.courses.all()[0]
+        result = {
+            'code': 1,
+            'school': school,
+            'course': course
+        }
+        return result, 200
+
+
 public_api.add_resource(UploadFile, '/uploads')
 
 public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
 
 public_api.add_resource(WxStudentLogin, '/wxstlogin')
+
+public_api.add_resource(SchoolInfo, '/school/<school_id>')

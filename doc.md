@@ -341,12 +341,12 @@ grate 0 1 2  default=0未选  1听懂  2没听懂
     http --json --auth 15900000001:123456 PUT :5000/v1/student/ask/1/answergrate grate=0
 
 
-### 小程序login鉴权
-v1/public/wxstlogin post  
-school_id  
-code  
 
-    http --json POST :5000/v1/public/wxstlogin school_id=7 code=0010Rkok2inZ8F9847394k20Rko9
+### 获取个人信息
+v1/student/<student_id>  get  
+school_id  
+
+    http --json --auth 15900000001:123456 GET :5000/v1/student/1
 
 
 Public
@@ -356,6 +356,20 @@ Public
 v1/public/uploads 
 
     http -f --auth user:password :5000/v1/public/uploads file@bee.jpg
+
+
+### 小程序login鉴权  
+v1/public/wxstlogin post  
+school_id  
+code  
+
+    http --json POST :5000/v1/public/wxstlogin school_id=7 code=0010Rkok2inZ8F9847394k20Rko9
+
+
+### 获取学校信息  
+v1/public/school/<school_id>
+
+    http --json GET :5000/v1/public/school/1
 
 
 

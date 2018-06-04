@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import g, url_for
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from webargs import fields, validate
@@ -83,9 +84,9 @@ class Questions(Resource):
         s_id = args['school_id']
         abort_if_school_doesnt_exist(s_id)
         if g.student_user.is_school_joined(s_id) is False:
-            abort(401, message='不是这个学校/机构的学生')
+            abort(403, code=0, message='不是这个学校/机构的学生')
         if g.student_user.can_ask(s_id) is False:
-            abort(401, message='你的提问次数已经用完了')
+            abort(403, code=0, message='你的提问次数已经用完了')
         img_ids = args['img_ids']
         img_list = img_ids.rsplit(',')
         imgs = []
@@ -126,7 +127,7 @@ class Questions(Resource):
         answered = args['answered']
         abort_if_school_doesnt_exist(s_id)
         if g.student_user.is_school_joined(s_id) is False:
-            abort(401, message='不是这个学校/机构的学生')
+            abort(403, code=0, message='不是这个学校/机构的学生')
         if answered == 0:
             pagination = Ask.query.filter_by(
                 school_id=s_id,
@@ -363,13 +364,62 @@ class SchoolInfo(Resource):
     def get(self, school_id):
         abort_if_school_doesnt_exist(school_id)
         if g.student_user.is_school_joined(school_id) is False:
-            abort(401, code=0, message='不是这个学校/机构的学生')
+            abort(403, code=0, message='不是这个学校/机构的学生')
         school = School.query.get(school_id)
         course = school.courses.all()[0]
         result = {
             'code': 1,
             'school': school,
             'course': course
+        }
+        return result, 200
+
+
+class StudentInSchoolInfo(Resource):
+    
+    school_args = {
+        'school_id': fields.Int(required=True)
+    }
+
+    student_info = {
+        'student_id': rfields.Integer,
+        'nickname': rfields.String,
+        'imgurl': rfields.String,
+        'vip_expire': rfields.DateTime,
+        'vip_status': rfields.Boolean,
+        'real_times': rfields.Integer
+    }
+
+    @marshal_with(student_info)
+    @use_args(school_args)
+    def get(self, args, student_id):
+        school_id = args['school_id']
+        abort_if_student_doesnt_exist(student_id)
+        abort_if_school_doesnt_exist(school_id)
+        student = Student.query.get(student_id)
+        if student.is_school_joined(school_id) is False:
+            abort(403, code=0, message='不是这个学校/机构的学生')
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).first()
+        vip_expire = member_info.vip_expire
+        vip_times = member_info.vip_times
+        nomal_times = member_info.nomal_times
+        real_times = nomal_times
+        vip_status = False
+        if member_info.vip_expire > datetime.utcnow():
+            vip_status = True
+            nomal_times = vip_times + nomal_times
+            if vip_expire == -1:
+                real_times = -1
+        result = {
+            'student_id': student_id,
+            'nickname': student.nickname,
+            'imgurl': student.imgurl,
+            'vip_expire': vip_expire,
+            'vip_status': vip_status,
+            'real_times': real_times
         }
         return result, 200
 
@@ -384,3 +434,5 @@ student_api.add_resource(JoinSchool, '/joinschool/<school_id>')
 student_api.add_resource(AnswerGrate, '/ask/<ask_id>/answergrate')
 
 student_api.add_resource(SchoolInfo, '/school/<school_id>')
+
+student_api.add_resource(StudentInSchoolInfo, '/<student_id>')

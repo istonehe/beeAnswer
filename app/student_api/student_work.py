@@ -387,6 +387,7 @@ class StudentInSchoolInfo(Resource):
     }
 
     student_info = {
+        'code': rfields.Integer,
         'student_id': rfields.Integer,
         'nickname': rfields.String,
         'imgurl': rfields.String,
@@ -423,8 +424,8 @@ class StudentInSchoolInfo(Resource):
             school_id=school_id,
             student_id=student_id
         ).count()
-
         result = {
+            'code': 1,
             'student_id': student_id,
             'nickname': student.nickname,
             'imgurl': student.imgurl,

@@ -260,6 +260,19 @@ class SchoolInfo(Resource):
         return result, 200
 
 
+# 微信资料解密
+class WeiXinSecret(Resource):
+    
+    wx_info = {
+        'encryptedData': fields.Str(required=True),
+
+    }
+
+    @use_args(wx_info)
+    def post(self):
+        pass
+
+
 public_api.add_resource(UploadFile, '/uploads')
 
 public_api.add_resource(StudentReg, '/student/register')

@@ -412,12 +412,13 @@ class Questions(Resource):
         if pagination.has_next:
             next = url_for('school_api.asks', sc_id=sc_id, st_id=st_id, page=page+1, per_page=per_page)
         for ask in asks:
-            img_ids = ask.img_ids
-            img_list = img_ids.rsplit(',')
             imgs = []
-            for i in img_list:
-                img = Topicimage.query.get(i)
-                imgs.append(img.img_url)
+            img_ids = ask.img_ids
+            if img_ids:
+                img_list = img_ids.rsplit(',')
+                for i in img_list:
+                    img = Topicimage.query.get(i)
+                    imgs.append(img.img_url)
             ask.imgs = imgs
         result = {
             'asks': asks,
@@ -463,12 +464,13 @@ class Question(Resource):
         ask = Ask.query.get(id)
         if g.teacher_user.is_employ(ask.school_id) is False:
             abort(401, message='你不是这里的老师')
-        img_ids = ask.img_ids
-        img_list = img_ids.rsplit(',')
         imgs = []
-        for i in img_list:
-            img = Topicimage.query.get(i)
-            imgs.append(img.img_url)
+        img_ids = ask.img_ids
+        if img_ids:
+            img_list = img_ids.rsplit(',')
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                imgs.append(img.img_url)
         ask.imgs = imgs
         return ask, 200
 
@@ -503,14 +505,15 @@ class TeacherAnswers(Resource):
         sc_id = ask.school_id
         if g.teacher_user.is_employ(sc_id) is False:
             abort(401, message='没有权限')
-        img_ids = args['img_ids']
-        img_list = img_ids.rsplit(',')
         imgs = []
-        for i in img_list:
-            img = Topicimage.query.get(i)
-            if img is None:
-                abort(401, message='图片不存在')
-            imgs.append(img.img_url)
+        img_ids = args['img_ids']
+        if img_ids:
+            img_list = img_ids.rsplit(',')
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                if img is None:
+                    abort(401, message='图片不存在')
+                imgs.append(img.img_url)
         answer = Answer(
             teacher_id=g.teacher_user.id,
             answer_text=args['answer_text'],
@@ -533,12 +536,13 @@ class TeacherAnswers(Resource):
         if g.teacher_user.is_employ(sc_id) is False:
             abort(401, message='没有权限')
         for answer in answers:
-            img_ids = answer.img_ids
-            img_list = img_ids.rsplit(',')
             imgs = []
-            for i in img_list:
-                img = Topicimage.query.get(i)
-                imgs.append(img.img_url)
+            img_ids = answer.img_ids
+            if img_ids:
+                img_list = img_ids.rsplit(',')
+                for i in img_list:
+                    img = Topicimage.query.get(i)
+                    imgs.append(img.img_url)
             answer.imgs = imgs
         return answers, 200
 

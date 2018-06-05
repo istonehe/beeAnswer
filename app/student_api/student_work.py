@@ -87,14 +87,15 @@ class Questions(Resource):
             abort(403, code=0, message='不是这个学校/机构的学生')
         if g.student_user.can_ask(s_id) is False:
             abort(403, code=0, message='你的提问次数已经用完了')
-        img_ids = args['img_ids']
-        img_list = img_ids.rsplit(',')
         imgs = []
-        for i in img_list:
-            img = Topicimage.query.get(i)
-            if img is None:
-                abort(401, message='图片不存在')
-            imgs.append(img.img_url)
+        img_ids = args['img_ids']
+        if img_ids:
+            img_list = img_ids.rsplit(',')
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                if img is None:
+                    abort(401, message='图片不存在')
+                imgs.append(img.img_url)
         ask = Ask(
             school_id=s_id,
             student_id=g.student_user.id,
@@ -160,12 +161,13 @@ class Questions(Resource):
             next = url_for('student_api.asks', s_id=s_id, page=page+1, per_page=per_page)
 
         for ask in asks:
-            img_ids = ask.img_ids
-            img_list = img_ids.rsplit(',')
             imgs = []
-            for i in img_list:
-                img = Topicimage.query.get(i)
-                imgs.append(img.img_url)
+            img_ids = ask.img_ids
+            if img_ids:
+                img_list = img_ids.rsplit(',')
+                for i in img_list:
+                    img = Topicimage.query.get(i)
+                    imgs.append(img.img_url)
             ask.imgs = imgs
 
         result = {
@@ -216,12 +218,13 @@ class Question(Resource):
         ask = Ask.query.get(id)
         if g.student_user.id != ask.student_id:
             abort(401, message='没有权限')
-        img_ids = ask.img_ids
-        img_list = img_ids.rsplit(',')
         imgs = []
-        for i in img_list:
-            img = Topicimage.query.get(i)
-            imgs.append(img.img_url)
+        img_ids = ask.img_ids
+        if img_ids:
+            img_list = img_ids.rsplit(',')
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                imgs.append(img.img_url)
         ask.imgs = imgs
         return ask, 200
 
@@ -266,14 +269,15 @@ class StudentAnswers(Resource):
             abort(401, message='没有权限')
         if ask.be_answered is False:
             abort(401, message='老师没有回答')
-        img_ids = args['img_ids']
-        img_list = img_ids.rsplit(',')
         imgs = []
-        for i in img_list:
-            img = Topicimage.query.get(i)
-            if img is None:
-                abort(401, message='图片不存在')
-            imgs.append(img.img_url)
+        img_ids = args['img_ids']
+        if img_ids:
+            img_list = img_ids.rsplit(',')
+            for i in img_list:
+                img = Topicimage.query.get(i)
+                if img is None:
+                    abort(401, message='图片不存在')
+                imgs.append(img.img_url)
         answer = Answer(
             student_id=g.student_user.id,
             answer_text=args['answer_text'],
@@ -296,12 +300,13 @@ class StudentAnswers(Resource):
         if g.student_user.id != st_id:
             abort(401, message='没有权限')
         for answer in answers:
-            img_ids = answer.img_ids
-            img_list = img_ids.rsplit(',')
             imgs = []
-            for i in img_list:
-                img = Topicimage.query.get(i)
-                imgs.append(img.img_url)
+            img_ids = answer.img_ids
+            if img_ids:
+                img_list = img_ids.rsplit(',') 
+                for i in img_list:
+                    img = Topicimage.query.get(i)
+                    imgs.append(img.img_url)
             answer.imgs = imgs
         return answers, 200
 
@@ -387,7 +392,8 @@ class StudentInSchoolInfo(Resource):
         'imgurl': rfields.String,
         'vip_expire': rfields.DateTime,
         'vip_status': rfields.Boolean,
-        'real_times': rfields.Integer
+        'real_times': rfields.Integer,
+        'asks_count': rfields.Integer
     }
 
     @marshal_with(student_info)
@@ -413,13 +419,19 @@ class StudentInSchoolInfo(Resource):
             nomal_times = vip_times + nomal_times
             if vip_expire == -1:
                 real_times = -1
+        asks_count = db.session.query(Ask).filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).count()
+
         result = {
             'student_id': student_id,
             'nickname': student.nickname,
             'imgurl': student.imgurl,
             'vip_expire': vip_expire,
             'vip_status': vip_status,
-            'real_times': real_times
+            'real_times': real_times,
+            'asks_count': asks_count
         }
         return result, 200
 

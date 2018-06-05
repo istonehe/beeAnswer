@@ -13,6 +13,7 @@ from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as 
 from ..models import Teacher, Student, Topicimage, School
 from .. import db
 from . import public_api
+from ..WXBizDataCrypt.py import WXBizDataCrypt
 
 TIMEOUT = 2
 wxurl = 'https://api.weixin.qq.com/sns/jscode2session'
@@ -264,12 +265,40 @@ class SchoolInfo(Resource):
 class WeiXinSecret(Resource):
     
     wx_info = {
-        'encryptedData': fields.Str(required=True),
-
+        'student_id': fields.Int(required=True),
+        'nickname': fields.Str(missing=None),
+        'avatarurl': fields.Str(missing=None),
+        'gender': fields.Str(missing='0'),
+        'city': fields.Str(missing=None),
+        'province': fields.Str(missing=None),
+        'country': fields.Str(missing=None), 
+        'rawData': fields.Str(missing=None),
+        'signature': fields.Str(missing=None),
+        'encryptedData': fields.Str(missing=None),
+        'iv': fields.Str(missing=None)
     }
 
     @use_args(wx_info)
-    def post(self):
+    def post(self, school_id, student_id):
+        school = School.query.get(school_id)
+        if school is None:
+            abort(404, code=0, message='school not found')
+        student = Student.query.get(student_id)
+        if student is None:
+            abort(404, code=0, message='Student not found')
+        student.nickname = args['nickname']
+        student.imgurl = args['avatarurl']
+        student.gender = args['gender']
+        student.city = args['city']
+        student.province = args['province']
+        student.country = args['country']
+        # 数据解密
+        appId = school.wx_appid
+        sessionKey = school.wx_sessionkey
+        encryptedData = args['encryptedData']
+        iv = args['iv'] = args['iv']
+        pc = WXBizDataCrypt(appId, sessionKey)
+        print(pc.decrypt(encryptedData, iv))
         pass
 
 
@@ -279,5 +308,6 @@ public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
 
 public_api.add_resource(WxStudentLogin, '/wxstlogin')
+public_api.add_resource(WeiXinSecret, '/studentwxsecret/<school_id>/<student_id>')
 
 public_api.add_resource(SchoolInfo, '/school/<school_id>')

@@ -263,29 +263,27 @@ class SchoolInfo(Resource):
 
 # 微信资料解密
 class WeiXinSecret(Resource):
-    
+
     wx_info = {
-        'student_id': fields.Int(required=True),
         'nickname': fields.Str(missing=None),
         'avatarurl': fields.Str(missing=None),
         'gender': fields.Str(missing='0'),
         'city': fields.Str(missing=None),
         'province': fields.Str(missing=None),
         'country': fields.Str(missing=None), 
-        'rawData': fields.Str(missing=None),
-        'signature': fields.Str(missing=None),
         'encryptedData': fields.Str(missing=None),
         'iv': fields.Str(missing=None)
     }
 
     @use_args(wx_info)
-    def post(self, school_id, student_id):
+    def put(self, args, school_id, student_id):
         school = School.query.get(school_id)
         if school is None:
             abort(404, code=0, message='school not found')
         student = Student.query.get(student_id)
         if student is None:
-            abort(404, code=0, message='Student not found')
+            abort(404, code=0, message='Student not found')  
+        # 存入公开数据
         student.nickname = args['nickname']
         student.imgurl = args['avatarurl']
         student.gender = args['gender']
@@ -294,12 +292,20 @@ class WeiXinSecret(Resource):
         student.country = args['country']
         # 数据解密
         appId = school.wx_appid
-        sessionKey = school.wx_sessionkey
+        sessionKey = student.wx_sessionkey
         encryptedData = args['encryptedData']
         iv = args['iv'] = args['iv']
         pc = WXBizDataCrypt(appId, sessionKey)
-        print(pc.decrypt(encryptedData, iv))
-        pass
+        # 解密结果info
+        info = pc.decrypt(encryptedData, iv)
+        # 存入敏感数据
+        student.wx_unionid = info.get('unionId', None)
+        db.session.commit()
+        result = {
+            'code': 1,
+            'message': 'ok',
+        }
+        return result, 201
 
 
 public_api.add_resource(UploadFile, '/uploads')
@@ -308,6 +314,6 @@ public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
 
 public_api.add_resource(WxStudentLogin, '/wxstlogin')
-public_api.add_resource(WeiXinSecret, '/studentwxsecret/<school_id>/<student_id>')
+public_api.add_resource(WeiXinSecret, '/studentwxsecret/<int:school_id>/<int:student_id>')
 
-public_api.add_resource(SchoolInfo, '/school/<school_id>')
+public_api.add_resource(SchoolInfo, '/school/<int:school_id>')

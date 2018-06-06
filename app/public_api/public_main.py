@@ -7,13 +7,13 @@ from flask import g, request, current_app
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.utils import secure_filename
-from webargs import fields
+from webargs import fields, validate
 from webargs.flaskparser import use_args
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as _ConnectionError
 from ..models import Teacher, Student, Topicimage, School
 from .. import db
 from . import public_api
-from ..WXBizDataCrypt.py import WXBizDataCrypt
+from ..WXBizDataCrypt import WXBizDataCrypt
 
 TIMEOUT = 2
 wxurl = 'https://api.weixin.qq.com/sns/jscode2session'
@@ -267,10 +267,10 @@ class WeiXinSecret(Resource):
     wx_info = {
         'nickname': fields.Str(missing=None),
         'avatarurl': fields.Str(missing=None),
-        'gender': fields.Str(missing='0'),
+        'gender': fields.Int(validate=validate.OneOf([0, 1, 2]), missing=0),
         'city': fields.Str(missing=None),
         'province': fields.Str(missing=None),
-        'country': fields.Str(missing=None), 
+        'country': fields.Str(missing=None),
         'encryptedData': fields.Str(missing=None),
         'iv': fields.Str(missing=None)
     }
@@ -294,7 +294,7 @@ class WeiXinSecret(Resource):
         appId = school.wx_appid
         sessionKey = student.wx_sessionkey
         encryptedData = args['encryptedData']
-        iv = args['iv'] = args['iv']
+        iv = args['iv']
         pc = WXBizDataCrypt(appId, sessionKey)
         # 解密结果info
         info = pc.decrypt(encryptedData, iv)

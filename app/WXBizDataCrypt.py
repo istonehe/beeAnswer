@@ -2,6 +2,7 @@ import base64
 import json
 from Crypto.Cipher import AES
 
+
 class WXBizDataCrypt:
     def __init__(self, appId, sessionKey):
         self.appId = appId

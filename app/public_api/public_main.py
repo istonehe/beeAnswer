@@ -84,9 +84,9 @@ def verify_password(username_or_token, password):
             return False
     g.user = teacher_user or student_user
     if teacher_user:
-        g.user.user_type = 'teacher'
+        g.user.user_type = 1
     if student_user:
-        g.user.user_type = 'student'
+        g.user.user_type = 2
     return True
 
 

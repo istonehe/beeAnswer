@@ -83,6 +83,10 @@ def verify_password(username_or_token, password):
         if (not teacher_user or not t) and (not student_user or not s):
             return False
     g.user = teacher_user or student_user
+    if teacher_user:
+        g.user.user_type = 'teacher'
+    if student_user:
+        g.user.user_type = 'student'
     return True
 
 
@@ -109,10 +113,10 @@ class UploadFile(Resource):
     # @marshal_with(uploadfile_info, envelope='resource')
     def post(self):
         if 'file' not in request.files:
-            abort(400, message='没有文件')
+            abort(400, code=0, message='没有文件')
         file = request.files['file']
         if file.filename == '':
-            abort(400, message='No selected file')
+            abort(400, code=0, message='No selected file')
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             md5filename = rename_file(filename)
@@ -120,12 +124,17 @@ class UploadFile(Resource):
             file.save(os.path.join(upfolder, md5filename))
             topicimage = Topicimage(
                 img_url='uploads' + '/' + md5filename,
-                auth_telephone=g.user.telephone
+                auth_telephone=g.user.telephone,
+                user_type=g.user.user_type,
+                user_id=g.user.id
             )
             db.session.add(topicimage)
             db.session.commit()
             result = {
+                'code': 1,
                 'id': topicimage.id,
+                'user_type': topicimage.user_type,
+                'user_id': topicimage.user_id,
                 'url': 'uploads' + '/' + md5filename,
                 'auth_telephone': topicimage.auth_telephone
             }

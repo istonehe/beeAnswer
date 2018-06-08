@@ -385,6 +385,7 @@ class Topicimage(db.Model):
     __tablename__ = 'topicimages'
     id = db.Column(db.Integer, primary_key=True)
     user_type = db.Column(db.Integer)
+    user_id = db.Column(db.Integer)
     img_url = db.Column(db.String(256))
     auth_telephone = db.Column(db.String(16))
     img_sort = db.Column(db.Integer)

@@ -105,3 +105,6 @@ fabfile.py
 
 # vscode
 .vscode/
+
+# sql
+*.sqlite

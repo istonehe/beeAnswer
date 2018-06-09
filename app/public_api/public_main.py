@@ -90,6 +90,11 @@ def verify_password(username_or_token, password):
     return True
 
 
+@auth.error_handler
+def auth_error():
+    abort(401, code=4, message='未授权')
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']

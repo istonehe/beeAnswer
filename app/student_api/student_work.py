@@ -58,6 +58,7 @@ class Questions(Resource):
     }
 
     ask_info = {
+        'code': rfields.Integer,
         'id': rfields.Integer,
         'student_id': rfields.Integer,
         'school_id': rfields.Integer,
@@ -171,6 +172,7 @@ class Questions(Resource):
             ask.imgs = imgs
 
         result = {
+            'code': 1,
             'asks': asks,
             'prev': prev,
             'next': next,

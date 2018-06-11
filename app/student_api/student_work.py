@@ -31,9 +31,9 @@ def abort_if_answer_doesnt_exist(id):
 class Questions(Resource):
     ask_args = {
         'school_id': fields.Int(required=True),
-        'ask_text': fields.Str(required=True),
+        'ask_text': fields.Str(missing=None),
         'voice_url': fields.Str(missing=None),
-        'voice_duration': fields.Str(missing=None),
+        'voice_duration': fields.Int(missing=0),
         'img_ids': fields.Str(missing=None)
     }
 
@@ -45,6 +45,7 @@ class Questions(Resource):
     }
 
     answer_info = {
+        'code': rfields.Integer,
         'id': rfields.Integer,
         'student_id': rfields.Integer,
         'school_id': rfields.Integer,
@@ -59,17 +60,19 @@ class Questions(Resource):
 
     ask_info = {
         'code': rfields.Integer,
-        'id': rfields.Integer,
-        'student_id': rfields.Integer,
-        'school_id': rfields.Integer,
-        'timestamp': rfields.DateTime(dt_format='iso8601'),
-        'ask_text': rfields.String,
-        'voice_url': rfields.String,
-        'voice_duration': rfields.String,
-        'imgs': rfields.List(rfields.String),
-        'answers': rfields.Nested(answer_info),
-        'be_answered': rfields.Boolean,
-        'answer_grate': rfields.Integer
+        'ask': rfields.Nested({
+            'id': rfields.Integer,
+            'student_id': rfields.Integer,
+            'school_id': rfields.Integer,
+            'timestamp': rfields.DateTime(dt_format='iso8601'),
+            'ask_text': rfields.String,
+            'voice_url': rfields.String,
+            'voice_duration': rfields.String,
+            'imgs': rfields.List(rfields.String),
+            'answers': rfields.Nested(answer_info),
+            'be_answered': rfields.Boolean,
+            'answer_grate': rfields.Integer
+        })
     }
 
     ask_list_info = {
@@ -97,6 +100,8 @@ class Questions(Resource):
                 if img is None:
                     abort(401, message='图片不存在')
                 imgs.append(img.img_url)
+        if not(args['ask_text'] or args['voice_url'] or img_ids):
+            abort(400, code=0, message='没有提问任何问题')
         ask = Ask(
             school_id=s_id,
             student_id=g.student_user.id,
@@ -118,7 +123,11 @@ class Questions(Resource):
             member_info.nomal_times -= 1
         db.session.add(member_info)
         db.session.commit()
-        return ask, 200
+        result = {
+            'code': 1,
+            'ask': ask
+        }
+        return result, 200
 
     @marshal_with(ask_list_info)
     @use_args(ask_list_args)
@@ -194,24 +203,27 @@ class Question(Resource):
         'teacher_id': rfields.Integer,
         'ask_id': rfields.Integer,
         'timestamp': rfields.DateTime(dt_format='iso8601'),
-        'ask_text': rfields.String,
+        'answer_text': rfields.String,
         'voice_url': rfields.String,
         'voice_duration': rfields.String,
         'imgs': rfields.List(rfields.String)
     }
 
     ask_info = {
-        'id': rfields.Integer,
-        'student_id': rfields.Integer,
-        'school_id': rfields.Integer,
-        'timestamp': rfields.DateTime(dt_format='iso8601'),
-        'ask_text': rfields.String,
-        'voice_url': rfields.String,
-        'voice_duration': rfields.String,
-        'imgs': rfields.List(rfields.String),
-        'answers': rfields.Nested(answer_info),
-        'be_answered': rfields.Boolean,
-        'answer_grate': rfields.Integer
+        'code': rfields.Integer,
+        'ask': rfields.Nested({
+            'id': rfields.Integer,
+            'student_id': rfields.Integer,
+            'school_id': rfields.Integer,
+            'timestamp': rfields.DateTime(dt_format='iso8601'),
+            'ask_text': rfields.String,
+            'voice_url': rfields.String,
+            'voice_duration': rfields.String,
+            'imgs': rfields.List(rfields.String),
+            'answers': rfields.Nested(answer_info),
+            'be_answered': rfields.Boolean,
+            'answer_grate': rfields.Integer
+        })
     }
 
     @marshal_with(ask_info)
@@ -219,7 +231,7 @@ class Question(Resource):
         abort_if_ask_doesnt_exist(id)
         ask = Ask.query.get(id)
         if g.student_user.id != ask.student_id:
-            abort(401, message='没有权限')
+            abort(401, code=0, message='没有权限')
         imgs = []
         img_ids = ask.img_ids
         if img_ids:
@@ -228,16 +240,20 @@ class Question(Resource):
                 img = Topicimage.query.get(i)
                 imgs.append(img.img_url)
         ask.imgs = imgs
-        return ask, 200
+        result = {
+            'code': 1,
+            'ask': ask
+        }
+        return result, 200
 
     def delete(self, id):
         abort_if_ask_doesnt_exist(id)
         ask = Ask.query.get(id)
         if g.student_user.id != ask.student_id:
-            abort(401, message='没有权限')
+            abort(401, code=0, message='没有权限')
         db.session.delete(ask)
         db.session.commit()
-        return '', 204
+        return {'code': 1}, 204
 
 
 class StudentAnswers(Resource):
@@ -344,11 +360,11 @@ class AnswerGrate(Resource):
         abort_if_ask_doesnt_exist(ask_id)
         ask = Ask.query.get(ask_id)
         if g.student_user.id != ask.student_id:
-            abort(401, message='没有权限')
+            abort(403, code=0, message='没有权限')
         ask.answer_grate = args['grate']
         db.session.add(ask)
         db.session.commit()
-        return '成功', 201
+        return {'code': 1}, 201
 
 
 class SchoolInfo(Resource):

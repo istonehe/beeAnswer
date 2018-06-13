@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 from webargs import fields, validate
 from webargs.flaskparser import use_args
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as _ConnectionError
-from ..models import Teacher, Student, Topicimage, School
+from ..models import Teacher, Student, Topicimage, School, SchoolStudent
 from .. import db
 from . import public_api
 from ..WXBizDataCrypt import WXBizDataCrypt
@@ -230,18 +230,29 @@ class WxStudentLogin(Resource):
             abort(400, code=0, errcode=errcode, message=r.get('errmsg', ' '))
         openid = r.get('openid')
         session_key = r.get('session_key')
-        student = Student.query.filter_by(wx_openid=openid).first()
+
         # openid已经存在
-        if student:
-            student.wx_sessionkey = session_key
+        member_info = SchoolStudent.query.filter_by(wx_openid=openid).first()
+        if member_info:
+            member_info.wx.sessionKey = session_key
             db.session.commit()
+            student_id = member_info.student_id
+            student = Student.query.get(student_id)
             token = student.generate_auth_token(60*60*24*15)
-            return {'code': 1, 'student_id': student.id, 'token': token}, 200
+            return {'code': 1, 'student_id': student_id, 'token': token}, 200
+
         # 新的openid入库
-        newstudent = Student(wx_openid=openid, wx_sessionkey=session_key)
+        newstudent = Student(nickname=' ')
         db.session.add(newstudent)
         db.session.commit()
         newstudent.join_school(sc_id)
+        member_info = SchoolStudent.query.filter_by(
+            school_id=sc_id,
+            student_id=newstudent.id
+        ).first()
+        member_info.wx_openid = openid
+        member_info.wx_appsecret = session_key
+        db.session.commit()
         token = newstudent.generate_auth_token(60*60*24*15)
         return {'code': 1, 'student_id': newstudent.id, 'token': token}, 200
 

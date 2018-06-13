@@ -253,7 +253,7 @@ class Question(Resource):
             abort(401, code=0, message='没有权限')
         db.session.delete(ask)
         db.session.commit()
-        return {'code': 1}, 204
+        return '', 204
 
 
 class StudentAnswers(Resource):

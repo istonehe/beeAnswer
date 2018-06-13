@@ -68,6 +68,8 @@ class SchoolStudent(db.Model):
     vip_times = db.Column(db.Integer, default=0)
     nomal_times = db.Column(db.Integer, default=5)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    wx_openid = db.Column(db.String(32), unique=True)
+    wx_sessionkey = db.Column(db.String(32))
 
     school = db.relationship(
         "School",
@@ -244,9 +246,7 @@ class Student(db.Model):
     province = db.Column(db.String(16))
     country = db.Column(db.String(16))
     city = db.Column(db.String(16))
-    wx_openid = db.Column(db.String(32), unique=True)
     wx_unionid = db.Column(db.String(32), unique=True)
-    wx_sessionkey = db.Column(db.String(32))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     disabled = db.Column(db.Boolean, default=False)
     asks = db.relationship('Ask', backref='student', lazy='dynamic')

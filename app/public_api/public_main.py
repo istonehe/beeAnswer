@@ -234,7 +234,7 @@ class WxStudentLogin(Resource):
         # openid已经存在
         member_info = SchoolStudent.query.filter_by(wx_openid=openid).first()
         if member_info:
-            member_info.wx.sessionKey = session_key
+            member_info.wx_sessionKey = session_key
             db.session.commit()
             student_id = member_info.student_id
             student = Student.query.get(student_id)

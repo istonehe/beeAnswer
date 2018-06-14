@@ -3,7 +3,7 @@ from flask import g, url_for
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from webargs import fields, validate
 from webargs.flaskparser import use_args
-from ..models import Student, School, Ask, Answer, Topicimage, SchoolStudent
+from ..models import Student, School, Ask, Answer, Topicimage, SchoolStudent, Teacher
 from .. import db
 from . import student_api
 
@@ -26,6 +26,18 @@ def abort_if_ask_doesnt_exist(id):
 def abort_if_answer_doesnt_exist(id):
     if Answer.query.get(id) is None:
         abort(404, code=0, message='答案不存在')
+
+
+def imgidsToimgs(o):
+    imgs = []
+    img_ids = o.img_ids
+    if img_ids:
+        img_list = img_ids.rsplit(',')
+        for i in img_list:
+            img = Topicimage.query.get(i)
+            imgs.append(img.img_url)
+    o.imgs = imgs
+    return o
 
 
 class Questions(Resource):
@@ -171,6 +183,8 @@ class Questions(Resource):
             next = url_for('student_api.asks', s_id=s_id, page=page+1, per_page=per_page)
 
         for ask in asks:
+            ask = imgidsToimgs(ask)
+            '''
             imgs = []
             img_ids = ask.img_ids
             if img_ids:
@@ -179,6 +193,7 @@ class Questions(Resource):
                     img = Topicimage.query.get(i)
                     imgs.append(img.img_url)
             ask.imgs = imgs
+            '''
 
         result = {
             'code': 1,
@@ -201,6 +216,10 @@ class Question(Resource):
         'student_id': rfields.Integer,
         'school_id': rfields.Integer,
         'teacher_id': rfields.Integer,
+        'teacher_nickname': rfields.String,
+        'teacher_imgurl': rfields.String(default=''),
+        'student_nickname': rfields.String,
+        'student_imgurl': rfields.String(default=''),
         'ask_id': rfields.Integer,
         'timestamp': rfields.DateTime(dt_format='iso8601'),
         'answer_text': rfields.String,
@@ -232,14 +251,19 @@ class Question(Resource):
         ask = Ask.query.get(id)
         if g.student_user.id != ask.student_id:
             abort(401, code=0, message='没有权限')
-        imgs = []
-        img_ids = ask.img_ids
-        if img_ids:
-            img_list = img_ids.rsplit(',')
-            for i in img_list:
-                img = Topicimage.query.get(i)
-                imgs.append(img.img_url)
-        ask.imgs = imgs
+        ask = imgidsToimgs(ask)
+        for answer in ask.answers:
+            answer = imgidsToimgs(answer)
+            teacher_id = answer.teacher_id
+            if teacher_id:
+                teacher = Teacher.query.get(teacher_id)
+                answer.teacher_nickname = teacher.nickname
+                answer.teacher_imgurl = teacher.imgurl
+            student_id = answer.student_id
+            if student_id:
+                student = Student.query.get(student_id)
+                answer.student_nickname = student.nickname
+                answer.student_imgurl = student.imgurl
         result = {
             'code': 1,
             'ask': ask
@@ -284,9 +308,9 @@ class StudentAnswers(Resource):
         ask = Ask.query.get(a_id)
         st_id = ask.student_id
         if g.student_user.id != st_id:
-            abort(401, message='没有权限')
+            abort(401, code=0, message='没有权限')
         if ask.be_answered is False:
-            abort(401, message='老师没有回答')
+            abort(401, code=0, message='老师没有回答')
         imgs = []
         img_ids = args['img_ids']
         if img_ids:
@@ -294,7 +318,7 @@ class StudentAnswers(Resource):
             for i in img_list:
                 img = Topicimage.query.get(i)
                 if img is None:
-                    abort(401, message='图片不存在')
+                    abort(404, code=0, message='图片不存在')
                 imgs.append(img.img_url)
         answer = Answer(
             student_id=g.student_user.id,
@@ -316,23 +340,24 @@ class StudentAnswers(Resource):
         ask = Ask.query.get(ask_id)
         st_id = ask.student_id
         if g.student_user.id != st_id:
-            abort(401, message='没有权限')
+            abort(401, code=0, message='没有权限')
         for answer in answers:
-            imgs = []
+            answer = imgidsToimgs(answer)
+            '''imgs = []
             img_ids = answer.img_ids
             if img_ids:
                 img_list = img_ids.rsplit(',') 
                 for i in img_list:
                     img = Topicimage.query.get(i)
                     imgs.append(img.img_url)
-            answer.imgs = imgs
+            answer.imgs = imgs'''
         return answers, 200
 
     def delete(self, answer_id):
         abort_if_answer_doesnt_exist(answer_id)
         answer = Answer.query.get(answer_id)
         if g.student_user.id != answer.student_id:
-            abort(401, message='没有权限')
+            abort(401, code=0, message='没有权限')
         ask = Ask.query.get(answer.ask_id)
         ask.answers.remove(answer)
         db.session.delete(answer)

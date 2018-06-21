@@ -234,11 +234,12 @@ class WxStudentLogin(Resource):
         # openid已经存在
         member_info = SchoolStudent.query.filter_by(wx_openid=openid).first()
         if member_info:
-            member_info.wx_sessionKey = session_key
+            member_info.wx_sessionkey = session_key
             db.session.commit()
             student_id = member_info.student_id
             student = Student.query.get(student_id)
             token = student.generate_auth_token(60*60*24*15)
+            # 注意删除 openid sessinkey
             return {'code': 1, 'student_id': student_id, 'token': token}, 200
 
         # 新的openid入库
@@ -251,7 +252,7 @@ class WxStudentLogin(Resource):
             student_id=newstudent.id
         ).first()
         member_info.wx_openid = openid
-        member_info.wx_appsecret = session_key
+        member_info.wx_sessionkey = session_key
         db.session.commit()
         token = newstudent.generate_auth_token(60*60*24*15)
         return {'code': 1, 'student_id': newstudent.id, 'token': token}, 200
@@ -291,7 +292,7 @@ class WeiXinSecret(Resource):
 
     wx_info = {
         'nickname': fields.Str(missing=None),
-        'avatarurl': fields.Str(missing=None),
+        'avatarUrl': fields.Str(missing=None),
         'gender': fields.Int(validate=validate.OneOf([0, 1, 2]), missing=0),
         'city': fields.Str(missing=None),
         'province': fields.Str(missing=None),
@@ -307,17 +308,22 @@ class WeiXinSecret(Resource):
             abort(404, code=0, message='school not found')
         student = Student.query.get(student_id)
         if student is None:
-            abort(404, code=0, message='Student not found')  
+            abort(404, code=0, message='Student not found')
         # 存入公开数据
         student.nickname = args['nickname']
-        student.imgurl = args['avatarurl']
+        student.imgurl = args['avatarUrl']
         student.gender = args['gender']
         student.city = args['city']
         student.province = args['province']
         student.country = args['country']
+        # 获取会员信息
+        member_info = SchoolStudent.query.filter_by(
+            school_id=school_id,
+            student_id=student_id
+        ).first()
         # 数据解密
         appId = school.wx_appid
-        sessionKey = student.wx_sessionkey
+        sessionKey = member_info.wx_sessionkey
         encryptedData = args['encryptedData']
         iv = args['iv']
         pc = WXBizDataCrypt(appId, sessionKey)

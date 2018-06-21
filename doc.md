@@ -316,6 +316,7 @@ img_ids
 
     http --json --auth 15900000002:123456 POST :5000/v1/student/ask/1/answers answer_text=学生回复内容 img_ids=1,3
     
+    
 ### 查看答案列表
 v1/student/ask/<ask_id>/answers  
 
@@ -340,6 +341,11 @@ grate 0 1 2  default=0未选  1听懂  2没听懂
 
     http --json --auth 15900000001:123456 PUT :5000/v1/student/ask/1/answergrate grate=0
 
+
+### 答案评分值
+v1/student/ask/1/answergrate  get  
+
+    http --json --auth 15900000001:123456 GET :5000/v1/student/ask/1/answergrate
 
 
 ### 获取个人信息

@@ -88,9 +88,21 @@ class Questions(Resource):
     }
 
     ask_list_info = {
-        'asks': rfields.Nested(ask_info),
-        'prev': rfields.String,
-        'next': rfields.String,
+        'code': rfields.Integer,
+        'asks': rfields.Nested({
+            'id': rfields.Integer,
+            'student_id': rfields.Integer,
+            'school_id': rfields.Integer,
+            'timestamp': rfields.DateTime(dt_format='iso8601'),
+            'ask_text': rfields.String,
+            'voice_url': rfields.String,
+            'voice_duration': rfields.String,
+            'imgs': rfields.List(rfields.String),
+            'be_answered': rfields.Boolean,
+            'answer_grate': rfields.Integer
+        }),
+        'prev': rfields.String(default=''),
+        'next': rfields.String(default=''),
         'count': rfields.Integer
     }
 
@@ -151,33 +163,36 @@ class Questions(Resource):
         abort_if_school_doesnt_exist(s_id)
         if g.student_user.is_school_joined(s_id) is False:
             abort(403, code=0, message='不是这个学校/机构的学生')
+        # 全部
         if answered == 0:
             pagination = Ask.query.filter_by(
                 school_id=s_id,
                 student_id=g.student_user.id
-            ).paginate(
+            ).order_by(Ask.id.desc()).paginate(
                 page=page, per_page=per_page, error_out=True
             )
+        # 已回答
         if answered == 1:
             pagination = Ask.query.filter_by(
                 school_id=s_id,
                 student_id=g.student_user.id,
-                be_answered=False
-            ).paginate(
+                be_answered=True
+            ).order_by(Ask.id.desc()).paginate(
                 page=page, per_page=per_page, error_out=True
             )
+        # 未回答
         if answered == 2:
             pagination = Ask.query.filter_by(
                 school_id=s_id,
                 student_id=g.student_user.id,
-                be_answered=True
-            ).paginate(
+                be_answered=False
+            ).order_by(Ask.id.desc()).paginate(
                 page=page, per_page=per_page, error_out=True
             )
         asks = pagination.items
         prev = None
         if pagination.has_prev:
-            prev = url_for('student_api.questions', s_id=s_id, page=page-1, per_page=per_page)
+            prev = url_for('student_api.asks', s_id=s_id, page=page-1, per_page=per_page)
         next = None
         if pagination.has_next:
             next = url_for('student_api.asks', s_id=s_id, page=page+1, per_page=per_page)
@@ -380,12 +395,22 @@ class AnswerGrate(Resource):
         'grate': fields.Int(validate=validate.OneOf([0, 1, 2]), required=True)
     }
 
+    def get(self, ask_id):
+        abort_if_ask_doesnt_exist(ask_id)
+        ask = Ask.query.get(ask_id)
+        if g.student_user.id != ask.student_id:
+            abort(403, code=0, message='没有权限')
+        grate_value = ask.answer_grate
+        return {'code': 1, 'grate_value': grate_value}, 200
+
     @use_args(grate_args)
     def put(self, args, ask_id):
         abort_if_ask_doesnt_exist(ask_id)
         ask = Ask.query.get(ask_id)
         if g.student_user.id != ask.student_id:
             abort(403, code=0, message='没有权限')
+        if not ask.be_answered:
+            abort(400, code=0, message='没有被回答')
         ask.answer_grate = args['grate']
         db.session.add(ask)
         db.session.commit()
@@ -424,7 +449,7 @@ class SchoolInfo(Resource):
 
 
 class StudentInSchoolInfo(Resource):
-    
+
     school_args = {
         'school_id': fields.Int(required=True)
     }
@@ -434,10 +459,13 @@ class StudentInSchoolInfo(Resource):
         'student_id': rfields.Integer,
         'nickname': rfields.String,
         'imgurl': rfields.String,
-        'vip_expire': rfields.DateTime,
+        'vip_expire': rfields.DateTime(dt_format='iso8601'),
         'vip_status': rfields.Boolean,
         'real_times': rfields.Integer,
-        'asks_count': rfields.Integer
+        'asks_count': rfields.Integer,
+        'vip_times': rfields.Integer,
+        'nomal_times': rfields.Integer,
+        'timestamp': rfields.DateTime(dt_format='iso8601')
     }
 
     @marshal_with(student_info)
@@ -474,8 +502,11 @@ class StudentInSchoolInfo(Resource):
             'imgurl': student.imgurl,
             'vip_expire': vip_expire,
             'vip_status': vip_status,
+            'vip_times': member_info.vip_times,
+            'nomal_times': member_info.nomal_times,
             'real_times': real_times,
-            'asks_count': asks_count
+            'asks_count': asks_count,
+            'timestamp': member_info.timestamp
         }
         return result, 200
 

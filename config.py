@@ -14,7 +14,9 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, os.path.pardir, 'uploads')
     ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'mp3'])
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-
+    REDIS_URL = os.getenv('REDIS_URL')
+    IMGCODE_FILE = os.path.join(basedir, os.path.pardir, 'imgcodes')
+    
     @staticmethod
     def init_app(app):
         pass

@@ -108,3 +108,6 @@ fabfile.py
 
 # sql
 *.sqlite
+
+# aliyun
+app/dysms_python/*

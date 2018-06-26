@@ -1,8 +1,10 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import config
+from flask_redis import FlaskRedis
 
 db = SQLAlchemy()
+redis_store = FlaskRedis()
 
 
 def create_app(config_name):
@@ -11,6 +13,7 @@ def create_app(config_name):
     config[config_name].init_app(app)
 
     db.init_app(app)
+    redis_store.init_app(app)
 
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)

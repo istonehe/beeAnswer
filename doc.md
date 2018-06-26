@@ -145,8 +145,10 @@ telephone
 nickname  
 tcode  
 password  
+inputvalue
+uuid
 
-    http --json POST :5000/v1/public/school/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV
+    http --json POST :5000/v1/public/teacher/register telephone=13700000001 password=123456 nickname=huadou tcode=ZYSjkccO25UV uuid= inputvalue=
 
 
 ### token获取
@@ -378,6 +380,14 @@ v1/public/school/<school_id>
     http --json GET :5000/v1/public/school/1
 
 
+### 获取验证图片
+
+http GET :5000/v1/public/imgcode
+
+
+### 短信发送
+
+http --json POST :5000/v1/public/sendsms uuid= phone_numbers= inputvalue=
 
 ------
 bug  

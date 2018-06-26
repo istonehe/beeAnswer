@@ -2,7 +2,6 @@ import os
 import re
 import hashlib
 import time
-import requests
 from flask import g, request, current_app
 from flask_restful import Resource, abort, marshal_with, fields as rfields
 from flask_httpauth import HTTPBasicAuth
@@ -12,56 +11,13 @@ from webargs.flaskparser import use_args
 from requests.exceptions import ReadTimeout, ConnectTimeout, ConnectionError as _ConnectionError
 from ..models import Teacher, Student, Topicimage, School, SchoolStudent
 from .. import db
+from .. import redis_store
 from . import public_api
-from ..WXBizDataCrypt import WXBizDataCrypt
 
-TIMEOUT = 2
-wxurl = 'https://api.weixin.qq.com/sns/jscode2session'
 
 auth = HTTPBasicAuth()
 
 basedir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir, os.path.pardir, os.path.pardir)
-# use_args
-teacher_regs = {
-    'telephone': fields.Str(
-        required=True,
-        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
-    ),
-    'nickname': fields.Str(required=True),
-    'tcode': fields.Str(required=True),
-    'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
-}
-
-student_regs = {
-    'telephone': fields.Str(
-        required=True,
-        validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
-    ),
-    'nickname': fields.Str(required=True),
-    'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
-}
-
-# marshal_with
-teacher_info = {
-    'id': rfields.Integer,
-    'nickname': rfields.String,
-    'rename': rfields.String,
-    'intro': rfields.String,
-    'telephone': rfields.String
-}
-
-student_info = {
-    'id': rfields.Integer,
-    'nickname': rfields.String,
-    'rename': rfields.String,
-    'imgurl': rfields.String,
-    'telephone': rfields.String,
-    'fromwhere': rfields.String,
-    'wxopenid': rfields.String,
-    'timestamp': rfields.DateTime(dt_format='iso8601'),
-    'disabled': rfields.Boolean,
-    'expevalue': rfields.Integer
-}
 
 
 def abort_if_school_doesnt_exist(id):
@@ -146,25 +102,30 @@ class UploadFile(Resource):
             return result, 200
 
 
-class TeacherReg(Resource):
-    @marshal_with(teacher_info, envelope='resource')
-    @use_args(teacher_regs)
-    def post(self, args):
-        if Teacher.query.filter_by(telephone=args['telephone']).first():
-            abort(401, code=0, message='教师已经存在')
-        teacher = Teacher(
-            telephone=args['telephone'],
-            nickname=args['nickname'],
-            password=args['password']
-        )
-        db.session.add(teacher)
-        # 通过邀请码匹配学校并删除已经被使用的邀请码
-        if teacher.bind_school(args['tcode']):
-            result = Teacher.query.get(teacher.id)
-            return result, 201
-
-
 class StudentReg(Resource):
+
+    student_regs = {
+        'telephone': fields.Str(
+            required=True,
+            validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+        ),
+        'nickname': fields.Str(required=True),
+        'password': fields.Str(required=True, validate=lambda p: len(p) >= 6)
+    }
+
+    student_info = {
+        'id': rfields.Integer,
+        'nickname': rfields.String,
+        'rename': rfields.String,
+        'imgurl': rfields.String,
+        'telephone': rfields.String,
+        'fromwhere': rfields.String,
+        'wxopenid': rfields.String,
+        'timestamp': rfields.DateTime(dt_format='iso8601'),
+        'disabled': rfields.Boolean,
+        'expevalue': rfields.Integer
+    }
+
     @marshal_with(student_info, envelope='resource')
     @use_args(student_regs)
     def post(self, args):
@@ -180,82 +141,61 @@ class StudentReg(Resource):
         return student, 201
 
 
-class ConnectTimeoutError(Exception):
-    def __init__(self, code, description):
-        self.code = code
-        self.description = description
-
-    def __str__(self):
-        return '%s: %s' % (self.code, self.description)
-        abort(400, code=self.code, message=self.description)
-
-
-class ConnectionError(Exception):
-    def __init__(self, code, description):
-        self.code = code
-        self.description = description
-
-    def __str__(self):
-        abort(400, code=self.code, message=self.description)
-
-
-# 微信鉴权
-class WxStudentLogin(Resource):
-
-    wxlogin_args = {
-        'code': fields.Str(required=True),
-        'school_id': fields.Int(required=True)
+class TeacherReg(Resource):
+    # use_args
+    teacher_regs = {
+        'telephone': fields.Str(
+            required=True,
+            validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+        ),
+        'nickname': fields.Str(required=True),
+        'tcode': fields.Str(required=True),
+        'password': fields.Str(required=True, validate=lambda p: len(p) >= 6),
+        'uuid': fields.Str(required=True),
+        'phonecode': fields.Str(required=True)
     }
 
-    @use_args(wxlogin_args)
+    # marshal_with
+    teacher_info = {
+        'code': rfields.Integer,
+        'teacher': rfields.Nested({
+            'id': rfields.Integer,
+            'nickname': rfields.String,
+            'intro': rfields.String,
+            'telephone': rfields.String
+        })
+    }
+
+    @marshal_with(teacher_info)
+    @use_args(teacher_regs)
     def post(self, args):
-        sc_id = args['school_id']
-        school = School.query.get(sc_id)
-        if school is None:
-            abort(404, code=0, message='School not found')
-        appid = school.wx_appid
-        appsecret = school.wx_appsecret
-        code = args['code']
-        wxparams = {'appid': appid, 'secret': appsecret, 'js_code': code, 'grant_type': 'authorization_code'}
-        try:
-            r = requests.get(wxurl, params=wxparams, timeout=TIMEOUT).json()
-        except (ConnectTimeout, ReadTimeout):
-            raise ConnectTimeoutError(0, 'wx server connect timeout')
-        except _ConnectionError:
-            raise ConnectionError(0, 'wx server connect error')
-        pass
-        # 判断微信返回errcode
-        errcode = r.get('errcode', 0)
-        if errcode:
-            abort(400, code=0, errcode=errcode, message=r.get('errmsg', ' '))
-        openid = r.get('openid')
-        session_key = r.get('session_key')
+        # 验证短信码
+        auuid = args['uuid']
+        inputvalue = args['phonecode']
+        telephone = args['telephone']
+        value = redis_store.get(auuid)
+        if value is None:
+            return {'code': 0, 'message': '验证码错误'}, 403
+        if value.decode('utf-8') != (telephone + inputvalue):
+            redis_store.delete(auuid)
+            return {'code': 0, 'message': '验证码错误'}, 403
+        redis_store.delete(auuid)
 
-        # openid已经存在
-        member_info = SchoolStudent.query.filter_by(wx_openid=openid).first()
-        if member_info:
-            member_info.wx_sessionkey = session_key
-            db.session.commit()
-            student_id = member_info.student_id
-            student = Student.query.get(student_id)
-            token = student.generate_auth_token(60*60*24*15)
-            # 注意删除 openid sessinkey
-            return {'code': 1, 'student_id': student_id, 'token': token}, 200
-
-        # 新的openid入库
-        newstudent = Student(nickname=' ')
-        db.session.add(newstudent)
-        db.session.commit()
-        newstudent.join_school(sc_id)
-        member_info = SchoolStudent.query.filter_by(
-            school_id=sc_id,
-            student_id=newstudent.id
-        ).first()
-        member_info.wx_openid = openid
-        member_info.wx_sessionkey = session_key
-        db.session.commit()
-        token = newstudent.generate_auth_token(60*60*24*15)
-        return {'code': 1, 'student_id': newstudent.id, 'token': token}, 200
+        if Teacher.query.filter_by(telephone=telephone).first():
+            abort(401, code=0, message='教师已经存在')
+        teacher = Teacher(
+            telephone=telephone,
+            nickname=args['nickname'],
+            password=args['password']
+        )
+        db.session.add(teacher)
+        # 通过邀请码匹配学校并删除已经被使用的邀请码
+        if teacher.bind_school(args['tcode']):
+            result = {
+                'code': 1,
+                'teacher': teacher
+            }
+            return result, 201
 
 
 class SchoolInfo(Resource):
@@ -287,64 +227,9 @@ class SchoolInfo(Resource):
         return result, 200
 
 
-# 微信资料解密
-class WeiXinSecret(Resource):
-
-    wx_info = {
-        'nickname': fields.Str(missing=None),
-        'avatarUrl': fields.Str(missing=None),
-        'gender': fields.Int(validate=validate.OneOf([0, 1, 2]), missing=0),
-        'city': fields.Str(missing=None),
-        'province': fields.Str(missing=None),
-        'country': fields.Str(missing=None),
-        'encryptedData': fields.Str(missing=None),
-        'iv': fields.Str(missing=None)
-    }
-
-    @use_args(wx_info)
-    def put(self, args, school_id, student_id):
-        school = School.query.get(school_id)
-        if school is None:
-            abort(404, code=0, message='school not found')
-        student = Student.query.get(student_id)
-        if student is None:
-            abort(404, code=0, message='Student not found')
-        # 存入公开数据
-        student.nickname = args['nickname']
-        student.imgurl = args['avatarUrl']
-        student.gender = args['gender']
-        student.city = args['city']
-        student.province = args['province']
-        student.country = args['country']
-        # 获取会员信息
-        member_info = SchoolStudent.query.filter_by(
-            school_id=school_id,
-            student_id=student_id
-        ).first()
-        # 数据解密
-        appId = school.wx_appid
-        sessionKey = member_info.wx_sessionkey
-        encryptedData = args['encryptedData']
-        iv = args['iv']
-        pc = WXBizDataCrypt(appId, sessionKey)
-        # 解密结果info
-        info = pc.decrypt(encryptedData, iv)
-        # 存入敏感数据
-        student.wx_unionid = info.get('unionId', None)
-        db.session.commit()
-        result = {
-            'code': 1,
-            'message': 'ok',
-        }
-        return result, 201
-
-
 public_api.add_resource(UploadFile, '/uploads')
 
 public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
-
-public_api.add_resource(WxStudentLogin, '/wxstlogin')
-public_api.add_resource(WeiXinSecret, '/studentwxsecret/<int:school_id>/<int:student_id>')
 
 public_api.add_resource(SchoolInfo, '/school/<int:school_id>')

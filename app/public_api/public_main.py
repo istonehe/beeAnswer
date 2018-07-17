@@ -148,8 +148,8 @@ class TeacherReg(Resource):
             required=True,
             validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
         ),
-        'nickname': fields.Str(required=True),
-        'tcode': fields.Str(required=True),
+        'nickname': fields.Str(missing=''),
+        'tcode': fields.Str(missing=''),
         'password': fields.Str(required=True, validate=lambda p: len(p) >= 6),
         'uuid': fields.Str(required=True),
         'phonecode': fields.Str(required=True)
@@ -174,11 +174,11 @@ class TeacherReg(Resource):
         inputvalue = args['phonecode']
         telephone = args['telephone']
         value = redis_store.get(auuid)
-        if value is None:
-            return {'code': 0, 'message': '验证码错误'}, 403
+        if not value:
+            abort(403, code=0, message='验证码错误')
         if value.decode('utf-8') != (telephone + inputvalue):
             redis_store.delete(auuid)
-            return {'code': 0, 'message': '验证码错误'}, 403
+            abort(403, code=0, message='验证码错误')
         redis_store.delete(auuid)
 
         if Teacher.query.filter_by(telephone=telephone).first():
@@ -189,13 +189,72 @@ class TeacherReg(Resource):
             password=args['password']
         )
         db.session.add(teacher)
+        db.session.commit()
         # 通过邀请码匹配学校并删除已经被使用的邀请码
-        if teacher.bind_school(args['tcode']):
-            result = {
-                'code': 1,
-                'teacher': teacher
-            }
-            return result, 201
+        tcode = args['tcode']
+        if tcode:
+            teacher.bind_school(args['tcode'])
+
+        result = {
+            'code': 1,
+            'teacher': teacher
+        }
+        return result, 201
+
+
+class WxTeacherReg(Resource):
+    # use_args
+    teacher_regs = {
+        'teacher_id': fields.Int(required=True),
+        'telephone': fields.Str(
+            required=True,
+            validate=lambda p: re.match('^1[34578]\\d{9}$', p) is not None
+        ),
+        'password': fields.Str(required=True, validate=lambda p: len(p) >= 6),
+        'uuid': fields.Str(required=True),
+        'phonecode': fields.Str(required=True)
+    }
+
+    # marshal_with
+    teacher_info = {
+        'code': rfields.Integer,
+        'teacher': rfields.Nested({
+            'id': rfields.Integer,
+            'nickname': rfields.String,
+            'intro': rfields.String,
+            'telephone': rfields.String
+        })
+    }
+
+    @marshal_with(teacher_info)
+    @use_args(teacher_regs)
+    def put(self, args):
+        teacher_id = args['teacher_id']
+        auuid = args['uuid']
+        inputvalue = args['phonecode']
+        telephone = args['telephone']
+        password = args['password']
+        # 验证短信码
+        value = redis_store.get(auuid)
+        if not value:
+            abort(403, code=0, message='验证码错误')
+        if value.decode('utf-8') != (telephone + inputvalue):
+            redis_store.delete(auuid)
+            abort(403, code=0, message='验证码错误')
+        redis_store.delete(auuid)
+
+        if Teacher.query.filter_by(telephone=telephone).first():
+            abort(401, code=0, message='手机已经绑定到其他账户')
+
+        teacher = Teacher.query.get(teacher_id)
+        teacher.telephone = telephone
+        teacher.password = password
+        db.session.commit()
+        result = {
+            'code': 1,
+            'teacher': teacher
+        }
+        return result, 201
 
 
 class SchoolInfo(Resource):
@@ -231,5 +290,6 @@ public_api.add_resource(UploadFile, '/uploads')
 
 public_api.add_resource(StudentReg, '/student/register')
 public_api.add_resource(TeacherReg, '/teacher/register')
+public_api.add_resource(WxTeacherReg, '/teacher/wxregister')
 
 public_api.add_resource(SchoolInfo, '/school/<int:school_id>')

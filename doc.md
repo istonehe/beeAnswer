@@ -259,6 +259,12 @@ v1/school/student/<ask_id>/answers
     http --json --auth 13700000001:123456 GET :5000/v1/school/student/ask/1/answers
 
 
+### 查看教师个人详情
+v1/school/teacher/
+
+    http --json --auth 13700000001:123456 :5000/v1/school/teacher/10
+
+
 
 学生方
 ------

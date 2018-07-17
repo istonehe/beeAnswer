@@ -1,9 +1,12 @@
+import string
+import random
 from flask import g, url_for
 from datetime import datetime
 from flask_restful import Resource, marshal_with, abort, fields as rfields
 from webargs import fields, validate
 from webargs.flaskparser import use_args
 from ..models import Teacher, School, Student, SchoolStudent, Ask, Answer, Topicimage
+from .. import redis_store
 from .. import db
 from . import school_api
 
@@ -51,35 +54,6 @@ course_info = {
     'vip_times': rfields.Integer
 }
 
-school_info = {
-    'id': rfields.Integer,
-    'name': rfields.String,
-    'intro': rfields.String,
-    'teachercount': rfields.Integer,
-    'studentcount': rfields.Integer,
-    'teacherslist': rfields.Nested({
-        'id': rfields.Integer,
-        'nickname': rfields.String,
-        'rename': rfields.String,
-        'intro': rfields.String,
-        'imgurl': rfields.String,
-        'email': rfields.String,
-        'telephone': rfields.String,
-        'gender': rfields.Integer
-    })
-}
-
-teacher_info = {
-    'id': rfields.Integer,
-    'nickname': rfields.String,
-    'rename': rfields.String,
-    'intro': rfields.String,
-    'imgurl': rfields.String,
-    'email': rfields.String,
-    'telephone': rfields.String,
-    'gender': rfields.Integer,
-    'answercount': rfields.Integer
-}
 
 student_paging_list = {
     'students': rfields.Nested({
@@ -173,6 +147,25 @@ class Coursex(Resource):
 
 
 class SchoolDetail(Resource):
+
+    school_info = {
+        'id': rfields.Integer,
+        'name': rfields.String,
+        'intro': rfields.String,
+        'teachercount': rfields.Integer,
+        'studentcount': rfields.Integer,
+        'teacherslist': rfields.Nested({
+            'id': rfields.Integer,
+            'nickname': rfields.String,
+            'rename': rfields.String,
+            'intro': rfields.String,
+            'imgurl': rfields.String,
+            'email': rfields.String,
+            'telephone': rfields.String,
+            'gender': rfields.Integer
+        })
+    }
+
     @marshal_with(school_info, envelope='resource')
     def get(self, s_id):
         abort_if_school_doesnt_exist(s_id)
@@ -185,7 +178,56 @@ class SchoolDetail(Resource):
         return school, 200
 
 
+class TeacherInfo(Resource):
+
+    teacher_info = {
+        'code': rfields.Integer,
+        'teacher': rfields.Nested({
+            'id': rfields.Integer,
+            'nickname': rfields.String,
+            'intro': rfields.String,
+            'imgurl': rfields.String,
+            'email': rfields.String,
+            'telephone': rfields.String,
+            'gender': rfields.Integer,
+            'answercount': rfields.Integer,
+            'register': rfields.Boolean,
+            'schools': rfields.Nested({
+                'id': rfields.Integer,
+                'name': rfields.String
+            })
+        })
+    }
+
+    @marshal_with(teacher_info)
+    def get(self, t_id):
+        teacher = Teacher.query.get(t_id)
+        if g.teacher_user.id != int(t_id):
+            abort(403, code=0, message='没有权限')
+        teacher.register = True
+        if teacher.telephone is None:
+            teacher.register = False
+        result = {
+            'code': 1,
+            'teacher': teacher
+        }
+        return result, 200
+
+
 class TeacherDetail(Resource):
+
+    teacher_info = {
+        'id': rfields.Integer,
+        'nickname': rfields.String,
+        'rename': rfields.String,
+        'intro': rfields.String,
+        'imgurl': rfields.String,
+        'email': rfields.String,
+        'telephone': rfields.String,
+        'gender': rfields.Integer,
+        'answercount': rfields.Integer
+    }
+
     @marshal_with(teacher_info, envelope='resource')
     def get(self, s_id, t_id):
         abort_if_teacher_doesnt_exist(t_id)
@@ -558,9 +600,56 @@ class TeacherAnswers(Resource):
         return '', 204
 
 
+# 学校-教师绑定码
+class SchoolCode(Resource):
+    # 生成
+    def get(self, school_id):
+        abort_if_school_doesnt_exist(school_id)
+        if g.teacher_user.is_employ(school_id) is False:
+            abort(403, code=0, message='你不是这个学校的老师')
+        nums = string.digits
+        c = ''.join([random.choice(nums) for i in range(8)])
+        redis_store.setex(c, 3600, school_id)
+        result = {
+            'code': 1,
+            'tcode': c
+        }
+        return result, 200
+    
+    # 使用
+    code_info = {
+        'code': fields.Int(required=True)
+    }
+
+    return_info = {
+        'code': rfields.Integer,
+        'school_id': rfields.Integer
+    }
+
+    @use_args(code_info)
+    @marshal_with(return_info)
+    def post(sefl, args):
+        code = args['code']
+        school_id = redis_store.get(code)
+        if school_id is None:
+            abort(403, code=0, message='邀请码无效')
+        if g.teacher_user.is_employ(school_id):
+            abort(403, code=0, message='你已经是这个学校老师')
+        school = School.query.get(school_id)
+        g.teacher_user.schools.append(school)
+        db.session.commit()
+        redis_store.delete(code)
+        result = {
+            'code': 1,
+            'school_id': school_id
+        }
+        return result, 200
+
+
 school_api.add_resource(Coursex, '/course', endpoint='course')
 
 school_api.add_resource(SchoolDetail, '/<s_id>', endpoint='school')
+school_api.add_resource(TeacherInfo, '/teacher/<t_id>', endpoint='teacherinfo')
 school_api.add_resource(TeacherDetail, '/<s_id>/teacher/<t_id>', endpoint='teacher')
 school_api.add_resource(DismissTeacher, '/dismiss')
 school_api.add_resource(TeacherDismiss, '/teacher/dismiss')
@@ -573,3 +662,6 @@ school_api.add_resource(Question, '/student/ask/<id>', endpoint='ask')
 
 school_api.add_resource(TeacherAnswers, '/student/ask/<ask_id>/answers', endpoint='answers')
 school_api.add_resource(TeacherAnswers, '/student/answers/<answer_id>')
+
+school_api.add_resource(SchoolCode, '/schoolcode/<int:school_id>', endpoint='schoolcodes')
+school_api.add_resource(SchoolCode, '/schoolcode')

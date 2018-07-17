@@ -15,7 +15,7 @@ from .. import db
 from .. import redis_store
 from . import public_api
 from ..units import vercode
-from ..WXBizDataCrypt import WXBizDataCrypt
+from ..units import WXBizDataCrypt
 from ..dysms_python import demo_sms_send
 
 TIMEOUT = 2
@@ -65,7 +65,6 @@ class WxStudentLogin(Resource):
             raise ConnectTimeoutError(0, 'wx server connect timeout')
         except _ConnectionError:
             raise ConnectionError(0, 'wx server connect error')
-        pass
         # 判断微信返回errcode
         errcode = r.get('errcode', 0)
         if errcode:
@@ -100,8 +99,80 @@ class WxStudentLogin(Resource):
         return {'code': 1, 'student_id': newstudent.id, 'token': token}, 200
 
 
-# 微信资料解密
-class WeiXinSecret(Resource):
+# 微信鉴权老师
+class WxTeacherLogin(Resource):
+
+    login_args = {
+        'code': fields.Str(required=True)
+    }
+
+    teacher_info = {
+        'code': rfields.Integer,
+        'token': rfields.String,
+        'teacher': rfields.Nested({
+            'id': rfields.Integer,
+            'nickname': rfields.String,
+            'imgurl': rfields.String,
+            'intro': rfields.String,
+            'gender': rfields.Integer,
+            'register': rfields.Boolean
+        })
+    }
+
+    @use_args(login_args)
+    @marshal_with(teacher_info)
+    def post(self, args):
+        appid = os.getenv('WX_APPID')
+        appsecret = os.getenv('WX_APPSECRET')
+        code = args['code']
+        wxparams = {'appid': appid, 'secret': appsecret, 'js_code': code, 'grant_type': 'authorization_code'}
+        try:
+            r = requests.get(wxurl, params=wxparams, timeout=TIMEOUT).json()
+        except (ConnectTimeout, ReadTimeout):
+            raise ConnectTimeoutError(0, 'wx server connect timeout')
+        except _ConnectionError:
+            raise ConnectionError(0, 'wx server connect error')
+        errcode = r.get('errcode', 0)
+        if errcode:
+            abort(400, code=0, errcode=errcode, message=r.get('errmsg', ' '))
+        openid = r.get('openid')
+        session_key = r.get('session_key')
+
+        # 如果用户已存在
+        teacher = Teacher.query.filter_by(wx_openid=openid).first()
+        if teacher:
+            teacher.wx_sessionkey = session_key
+            db.session.commit()
+            token = teacher.generate_auth_token(60*60*24*15)
+            teacher.register = True
+            if teacher.telephone is None:
+                teacher.register = False
+            result = {
+                'code': 1,
+                'teacher': teacher,
+                'token': token
+            }
+            return result, 200
+
+        # 新用户入库
+        newteacher = Teacher(nickname='')
+        newteacher.wx_openid = openid
+        newteacher.wx_sessionkey = session_key
+        db.session.add(newteacher)
+        db.session.commit()
+        token = newteacher.generate_auth_token(60*60*24*15)
+        newteacher.register = False
+        result = {
+            'code': 1,
+            'teacher': newteacher,
+            'token': token
+        }
+
+        return result, 200
+
+
+# 学生微信资料解密
+class StudentWeiXinSecret(Resource):
 
     wx_info = {
         'nickname': fields.Str(missing=None),
@@ -139,11 +210,55 @@ class WeiXinSecret(Resource):
         sessionKey = member_info.wx_sessionkey
         encryptedData = args['encryptedData']
         iv = args['iv']
-        pc = WXBizDataCrypt(appId, sessionKey)
+        pc = WXBizDataCrypt.WXBizDataCrypt(appId, sessionKey)
         # 解密结果info
         info = pc.decrypt(encryptedData, iv)
         # 存入敏感数据
         student.wx_unionid = info.get('unionId', None)
+        db.session.commit()
+        result = {
+            'code': 1,
+            'message': 'ok',
+        }
+        return result, 201
+
+
+# 老师微信资料解密
+class TeacherWeiXinSecret(Resource):
+
+    wx_info = {
+        'nickname': fields.Str(missing=None),
+        'avatarUrl': fields.Str(missing=None),
+        'gender': fields.Int(validate=validate.OneOf([0, 1, 2]), missing=0),
+        'city': fields.Str(missing=None),
+        'province': fields.Str(missing=None),
+        'country': fields.Str(missing=None),
+        'encryptedData': fields.Str(missing=None),
+        'iv': fields.Str(missing=None)
+    }
+
+    @use_args(wx_info)
+    def put(self, args, teacher_id):
+        teacher = Teacher.query.get(teacher_id)
+        if teacher is None:
+            abort(404, code=0, message='teacher not found')
+        # 存入公开数据
+        teacher.nickname = args['nickname']
+        teacher.imgurl = args['avatarUrl']
+        teacher.gender = args['gender']
+        teacher.city = args['city']
+        teacher.province = args['province']
+        teacher.country = args['country']
+        # 数据解密
+        appId = os.getenv('WX_APPID')
+        sessionKey = teacher.wx_sessionkey
+        encryptedData = args['encryptedData']
+        iv = args['iv']
+        pc = WXBizDataCrypt.WXBizDataCrypt(appId, sessionKey)
+        # 解密结果info
+        info = pc.decrypt(encryptedData, iv)
+        # 存入敏感数据
+        teacher.wx_unionid = info.get('unionId', None)
         db.session.commit()
         result = {
             'code': 1,
@@ -160,7 +275,8 @@ class ImgCode(Resource):
     }
 
     imgcode_info = {
-        'codevalue': rfields.String,
+        'code': rfields.Integer,
+        # 'codevalue': rfields.String,
         'imgurl': rfields.String,
         'auuid': rfields.String
     }
@@ -177,7 +293,8 @@ class ImgCode(Resource):
         # 将uuid和对应的code值存入redis
         redis_store.setex(auuid, 580, codevalue)
         result = {
-            'codevalue': codevalue,
+            'code': 1,
+            # 'codevalue': codevalue,
             'imgurl': imgurl,
             'auuid': auuid
         }
@@ -251,8 +368,20 @@ class SendSMS(Resource):
         return {'code': 1, 'uuid': smsuuid}, 200
 
 
+# 验证手机号存在
+class PhoneExist(Resource):
+    def get(self, telephone):
+        teacher = Teacher.query.filter_by(telephone=telephone).first()
+        if teacher:
+            return {'code': 0, 'message': '该手机号已经被绑定'}
+        return {'code': 1, 'message': '该手机号可以使用'}
+
+
 public_api.add_resource(WxStudentLogin, '/wxstlogin')
-public_api.add_resource(WeiXinSecret, '/studentwxsecret/<int:school_id>/<int:student_id>')
+public_api.add_resource(WxTeacherLogin, '/wxteacherlogin')
+public_api.add_resource(StudentWeiXinSecret, '/studentwxsecret/<int:school_id>/<int:student_id>')
+public_api.add_resource(TeacherWeiXinSecret, '/teacherwxsecret/<int:teacher_id>')
 
 public_api.add_resource(ImgCode, '/imgcode')
+public_api.add_resource(PhoneExist, '/phoneexist/<telephone>')
 public_api.add_resource(SendSMS, '/sendsms')
